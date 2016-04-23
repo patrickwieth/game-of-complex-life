@@ -1,0 +1,82 @@
+<html>
+<head>
+    <title>Game of Life</title>
+    <style>
+        body{
+            width:1200px;
+            margin:0 auto;
+        }
+        rect{
+            stroke:rgba(204, 204,204,0.2);
+            shape-rendering:crispEdges;
+        }
+        .edit:hover{
+            stroke:steelblue;
+            cursor:pointer;
+        }
+        select{
+            width:80px;
+        }
+        button{
+            min-width:50px;
+            padding: 0 40px;
+        }
+    /*
+        path {
+            transition: fill 1s ease;
+        }
+        */
+    </style>
+</head>
+<body>
+    Set hunting rate: <select onchange="changeUniv(this)"></select>
+    <input type="number" onchange="setHuntRate(this)"/>
+    <button type="button" onClick="newUniv()">New</button>
+    <button type="button" onClick="startUniv()" id='startBtn'>Stop</button>
+</section>
+<svg width='1600' height='1000'></svg>
+
+<script src="/socket.io/socket.io.js"></script>
+<!--script src="http://d3js.org/d3.v3.min.js"></script-->
+<script src="/d3.v3.min.js"></script>
+
+<script src="goL.js"></script>
+
+<script>
+    function setHuntRate(rate) {
+        socket.send({
+            type: "setParameters",
+            huntRate: rate
+        });
+    }
+
+    function newUniv(){
+        console.log("newUniv()");
+
+        socket.send("reset");
+
+        goL.setGrid();
+    }
+
+    function startUniv(){
+        console.log("startUniv()");
+
+        if(d3.select("#startBtn").html()=="Start"){
+            d3.select("#startBtn").html("Pause");
+            socket.send("start");
+        }
+        else{
+            d3.select("#startBtn").html("Start");
+            socket.send("stop");
+        }
+    }
+
+    var socket = io.connect();
+
+    socket.on('state', function (data) {
+        var stuff = JSON.parse(data);
+
+        goL.setGrid(stuff);
+    });
+
+</script>

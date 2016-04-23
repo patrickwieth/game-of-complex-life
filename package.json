@@ -1,0 +1,11 @@
+{
+  "name": "CellularAutomaton",
+  "version": "0.0.1",
+  "dependencies": {
+    "bluebird": "^2.9.27",
+    "body-parser": "*",
+    "express": "= 2.4.6",
+    "ramda": "^0.20.1",
+    "socket.io": "= 1.4.3"
+  }
+}
