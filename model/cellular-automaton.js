@@ -35,15 +35,21 @@ erlaubte actions f�r eine Zelle:
 function Cell(initFunction, updateFunction) {
 
     this.neighbors = [];
+    this.targetedBy = [];
 
     this.update = updateFunction;
 
     this.init = function() {
-        this.futureState = initFunction();
         this.state = initFunction();
+        this.futureState = initFunction();
+        this.state.makeDecision = updateFunction;
     };
 
     this.init();
+
+    this.makeDecision = function () {
+        this.goal = this.state.makeDecision();
+    };
 }
 
 function Neighborhood(createSpace) {
@@ -53,7 +59,7 @@ function Neighborhood(createSpace) {
 // Constructor for Cellular Automaton
 function CellularAutomaton(neighborhood, cell) {
 
-    this.neighborhood = neighborhood;
+    //this.neighborhood = neighborhood;
 
     this.applyFunc = function(f) {
 
@@ -75,7 +81,7 @@ function CellularAutomaton(neighborhood, cell) {
         this.world = this.world.metric.createSpace();
 
         this.applyFunc(function(cell) {
-            cell.state = cell.init();
+            cell.init();
         })
     };
 
@@ -99,51 +105,69 @@ function CellularAutomaton(neighborhood, cell) {
         this.updateCells();
     };
 
+    this.evolve2 = function () {
+
+        this.applyFunc(function(cell) {
+            if(!isPassive(cell))
+                cell.makeDecision();
+        });
+
+        this.registerActions();
+
+        this.resolveActions();
+
+        this.updateCells2();
+    };
+
+    this.updateCells2 = function() {
+        this.applyFunc(function(cell) {
+
+            cell.state = cell.futureState;
+
+            cell.futureState = cell.state;
+        });
+    };
+
     this.resolveActions = function () {
         this.applyFunc(function(cell) {
+
                 if (cell.state.type === 'wall') {
                     // wall cannot be targeted
                     cell.targetedBy = [];
+
+                    cell.state.energy -= 1;
+                    if(cell.state.energy === 0) {
+                        cell.futureState = { type: 'empty' };
+                    }
                 }
                 else if (cell.state.type === 'empty') {
-                    // filter all actions that move or clone into empty space
-                    var validActions = R.filter(function (targeting) {
-                        return targeting.goal.action === 'clone' || targeting.goal.action === 'move';
-                    }, cell.targetedBy);
-                    // pick one of these actions at random
-                    var pickedAction = validActions[Math.floor(Math.random()*validActions.length)];
-                    // copy targeting cell into future state of targeted cell
-                    cell.futureState = pickedAction.state;
-                    // if it is move, then remove the cell from its origin point
-                    if(pickedAction.goal.action === 'move') pickedAction.futureState.type === 'empty';
+                    resolveEmpty(cell);
                 }
                 else if (cell.goal.action === 'stay') {
                     // if fighters are there, cell dies
                     if (R.any(function (targeting) {
                             return targeting.goal.action === 'fight'
                         }, cell.targetedBy)) {
-                        cell.futureState.type = 'empty';
+                        cell.futureState = {type: 'empty'};
                     }
                     else cell.targetedBy = [];
+
                 }
                 else if (cell.goal.action === 'fight') {
                     if (R.any(function (targeting) {
                             return targeting.goal.action === 'fight'
                         }, cell.targetedBy)) {
-                        cell.futureState.type = 'empty';
+                        cell.futureState = {type: 'empty'};
                     }
                     else cell.targetedBy = [];
                 }
                 else if (cell.goal.action === 'move'){
-                    // will the move be resolved? Then cell gets empty..
-                    if(cell.futureState.type === 'empty') {
-
-                    }
+                    resolveMove(cell);
                 }
                 else if (cell.goal.action === 'clone') {
                     // will the move be resolved? Then cell gets empty..
-                    if(cell.futureState.type === 'empty') {
-
+                    if(cell.neighbors[cell.goal.value].state.type === 'empty') {
+                        cell.neighbors[cell.goal.value].futureState = cell.state;
                     }
                 }
 
@@ -151,35 +175,90 @@ function CellularAutomaton(neighborhood, cell) {
 
     };
 
+    function resolveEmpty(cell) {
+        moveOrCloneInto(cell);
+    }
+
+    function resolveMove(cell) {
+        if(cell.goal === 'resolved')
+            cell.futureState = emptyState;
+        else
+            ;cell.futureState = cell.state;
+        // will the move resolve?
+        if(cell.futureState.type === 'empty') {
+            //moveOrCloneInto(cell);
+        }
+        else {
+            //cell.futureState = cell.state;
+        }
+    }
+
+    function moveOrCloneInto(cell) {
+        // filter all actions that move or clone into empty space
+        var validActions = R.filter(function (targeting) {
+            return targeting.goal.action === 'clone' || targeting.goal.action === 'move';
+        }, cell.targetedBy);
+        if(validActions.length > 0) {
+            // pick one of these actions at random
+            var pickedAction = validActions[Math.floor(Math.random()*validActions.length)];
+
+            // if it is move, then remove the cell from its origin point
+            if(pickedAction.goal.action === 'move') {
+                pickedAction.futureState = emptyState;
+                pickedAction.goal = 'resolved';
+            }
+
+            // copy targeting cell into future state of targeted cell
+            cell.futureState = pickedAction.state;
+            cell.targetedBy = [];
+
+        }
+        else {
+            if(cell.futureState !== 'empty')            cell.futureState = cell.state;
+        }
+    }
+
     this.registerActions = function () {
 
         this.applyFunc(function(cell) {
-            var actionFn = {
-                move: registerTarget,
-                clone: registerTarget,
-                fight: registerTarget,
-                stay: stay,
-                wall: wall
-            };
-
-            (actionFn[cell.goal.action] || actionFn.stay)(cell);
+            if(!isPassive(cell)) {
+                var actionFn = {
+                    move: registerTarget,
+                    clone: registerTarget,
+                    fight: registerTarget,
+                    stay: stay,
+                    wall: wall
+                };
+                (actionFn[cell.goal.action] || actionFn.stay)(cell);
+            }
         });
     };
+
+    function registerTarget(cell) {
+        if(cell.goal.value >= 0 && cell.goal.value < cell.neighbors.length ) {
+            cell.neighbors[cell.goal.value].targetedBy.push(cell);
+        }
+        else stay(cell);
+    }
+
+    function stay(cell) {
+
+    }
+
+    function wall(cell) {
+
+    }
+
+    function isPassive(cell) {
+        return cell.state.type === 'wall' || cell.state.type === 'empty';
+    }
 
     this.init();
 }
 
-function registerTarget(cell) {
-    if(cell.goal.value >= 0 && cell.goal.value < cell.neighbors.length ) {
-        cell.neighbor[cell.goal.value].targetedBy.push(cell);
-    }
-    else stayCell(cell);
-}
-
-function stay(cell) {
-
-}
-
-function wall(cell) {
-
-}
+var emptyState = {
+    color: 'white',
+    type: 'empty',
+    energy: 0,
+    makeDecision: function() {}
+};

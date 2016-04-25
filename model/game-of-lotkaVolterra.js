@@ -10,40 +10,128 @@ var CORPSE_COLOR = "black";
 var PREDATOR_COLOR = "red";
 var PREY_COLOR = "steelblue";
 var DEAD_COLOR = "white";
+var EMPTY_COLOR = "white";
 
-function mapRandomStart(fn, array) {
-    var startIndex = Math.floor(Math.random()*array.length);
-
-    for(var i = 0; i <= array.length; i++) {
-//        array[i+startIndex%array.length] = R.merge(array[i+startIndex%array.length], fn(array[i+startIndex%array.length]);
+function makeDecision() {
+    return {
+        action: "move",
+        value: Math.floor(Math.random() * 6)
     }
+};
+
+var randomMover = new cellularAutomaton.createCell(
+    function init() {
+        var aliveRatio = 0.1;
+        var rnd = Math.random();
+
+        if (rnd < aliveRatio) {
+            return {
+                color: PREY_COLOR,
+                alive: true,
+                type: 'mover',
+                energy: 0
+            };
+        }
+        else {
+            return {
+                color: DEAD_COLOR,
+                alive: false,
+                type: 'empty',
+                energy: 0
+            };
+        }
+    },
+    makeDecision
+);
+
+
+var mooreNeighborhood = new cellularAutomaton.createNeighborhood(function () {
+    var world = {};
+    var space = [];
+
+    var size = {
+        x: 100,
+        y: 100
+    };
+
+    for (var i = 0; i < size.x; i++) {
+        space.push([]);
+        for (var j = 0; j < size.y; j++) {
+            space[i].push(R.clone(randomMover));
+            space[i][j].init();
+
+        }
+    }
+
+    // the good modulo (works for negative values also)
+    function mod(n, m) {
+        return ((n % m) + m) % m;
+    }
+
+    // hexagonal neighboorhood
+    for (i = 0; i < size.x; i++) {
+        for (j = 0; j < size.y; j++) {
+
+            // left and right neighbors
+            space[i][j].neighbors.push(space[mod(i + 1, size.x)][j]);
+            space[i][j].neighbors.push(space[mod(i - 1, size.x)][j]);
+
+            // upper neighbors
+            space[i][j].neighbors.push(space[mod(i + j % 2 - 1, size.x)][mod(j + 1, size.y)]);
+            space[i][j].neighbors.push(space[mod(i + j % 2, size.x)][mod(j + 1, size.y)]);
+
+            // lower neighbors
+            space[i][j].neighbors.push(space[mod(i + j % 2 - 1, size.x)][mod(j - 1, size.y)]);
+            space[i][j].neighbors.push(space[mod(i + j % 2, size.x)][mod(j - 1, size.y)]);
+        }
+    }
+
+    world.parameters = {
+        huntRate: 0.3
+    };
+
+    world.space = space;
+
+    return world;
+});
+
+var gameOfLife = new cellularAutomaton.createAutomat(mooreNeighborhood, randomMover);
+
+
+function print() {
+    gameOfLife.applyFunc(function (cell) {
+        console.log(cell.state);
+    });
 }
 
-function shuffle(array) {
-    var currentIndex = array.length, temporaryValue, randomIndex;
 
-    // While there remain elements to shuffle...
-    while (0 !== currentIndex) {
+/*exports.init = function() {
+ gameOfLife = new cellularAutomaton.createAutomat(mooreNeighborhood, lifeCell);
+ };*/
+exports.init = R.bind(gameOfLife.init, gameOfLife);
 
-        // Pick a remaining element...
-        randomIndex = Math.floor(Math.random() * currentIndex);
-        currentIndex -= 1;
+exports.evolve = R.bind(gameOfLife.evolve2, gameOfLife);
 
-        // And swap it with the current element.
-        temporaryValue = array[currentIndex];
-        array[currentIndex] = array[randomIndex];
-        array[randomIndex] = temporaryValue;
-    }
+exports.getState = function () {
+    return gameOfLife.world.space;
+};
 
-    return array;
-}
+exports.buttonClick = function (event) {
+    gameOfLife.world.space[event.x][event.y].futureState.alive = true;
+    gameOfLife.world.space[event.x][event.y].futureState.type = "predator";
+    gameOfLife.world.space[event.x][event.y].futureState.color = "red";
+};
 
-//var startIndex = Math.floor(Math.random()*this.neighbors.length);
-//for(var i = 0; i <= this.neighbors.length; i++) {
+exports.setParameters = function (event) {
+    gameOfLife.parameters.huntRate = event.huntRate
+};
 
-//    var neighbor = this.neighbors[i+startIndex%this.neighbors.length];
 
-var predatorCell = new cellularAutomaton.createCell( function init() {
+
+
+
+
+var predatorCell = new cellularAutomaton.createCell(function init() {
         var huntRate = 0.3;
 
         return {
@@ -69,31 +157,31 @@ var predatorCell = new cellularAutomaton.createCell( function init() {
             return success;
         }
 
-        if(this.state.alive === true) {
+        if (this.state.alive === true) {
             var hunting = goHunt(this);
 
-                if(hunting) return {
-                    alive: true,
-                    color: PREDATOR_COLOR,
-                    type: 'predator'
-                };
-                else return {
-                    alive: false,
-                    color: CORPSE_COLOR,
-                    type: 'predator'
-                };
-            }
-            else {
-                return {
-                    alive: false,
-                    color: CORPSE_COLOR,
-                    type: 'prey'
-                };
-            }
+            if (hunting) return {
+                alive: true,
+                color: PREDATOR_COLOR,
+                type: 'predator'
+            };
+            else return {
+                alive: false,
+                color: CORPSE_COLOR,
+                type: 'predator'
+            };
         }
+        else {
+            return {
+                alive: false,
+                color: CORPSE_COLOR,
+                type: 'prey'
+            };
+        }
+    }
 );
 
-var lifeCell = new cellularAutomaton.createCell( function init () {
+var lifeCell = new cellularAutomaton.createCell(function init() {
         var aliveRatio = 0.3;
         var rnd = Math.random();
         return {
@@ -120,14 +208,14 @@ var lifeCell = new cellularAutomaton.createCell( function init () {
             return success;
         }
 
-        if(this.state.type === 'predator') {
-            if(this.state.alive === true) {
+        if (this.state.type === 'predator') {
+            if (this.state.alive === true) {
                 var hunting = goHunt(this);
 
-                if(hunting) return {
-                            alive: true,
-                            color: PREDATOR_COLOR,
-                            type: 'predator'
+                if (hunting) return {
+                    alive: true,
+                    color: PREDATOR_COLOR,
+                    type: 'predator'
                 };
                 else return {
                     alive: false,
@@ -148,27 +236,27 @@ var lifeCell = new cellularAutomaton.createCell( function init () {
         else {
             var neighborsAlive = 0;
 
-            R.forEach(function(neighbor) {
-                if(neighbor.state.alive && neighbor.state.type === 'prey') neighborsAlive++;
+            R.forEach(function (neighbor) {
+                if (neighbor.state.alive && neighbor.state.type === 'prey') neighborsAlive++;
             }, this.neighbors);
 
-            if(this.state.alive) {
-                if(this.futureState.type === 'predator') {
+            if (this.state.alive) {
+                if (this.futureState.type === 'predator') {
                     return this.futureState;
                 }
-                else if(neighborsAlive > 6 || neighborsAlive < 2) return {
+                else if (neighborsAlive > 6 || neighborsAlive < 2) return {
                     alive: false,
                     color: DEAD_COLOR,
                     type: "prey"
                 };
                 else return {
-                    alive: true,
-                    color: PREY_COLOR,
-                    type: "prey"
-                };
+                        alive: true,
+                        color: PREY_COLOR,
+                        type: "prey"
+                    };
             }
             else {
-                if(neighborsAlive === 3 || neighborsAlive === 2) return {
+                if (neighborsAlive === 3 || neighborsAlive === 2) return {
                     alive: true,
                     color: PREY_COLOR,
                     type: "prey"
@@ -183,80 +271,30 @@ var lifeCell = new cellularAutomaton.createCell( function init () {
     }
 );
 
-var mooreNeighborhood = new cellularAutomaton.createNeighborhood(function () {
-    var world = {};
-    var space = [];
 
-    var size = {
-        x: 100,
-        y: 100
-    };
+function mapRandomStart(fn, array) {
+    var startIndex = Math.floor(Math.random() * array.length);
 
-    for(var i = 0; i < size.x; i++) {
-        space.push([]);
-        for(var j = 0; j < size.y; j++) {
-            space[i].push(R.clone(lifeCell));
-            space[i][j].init();
-        }
+    for (var i = 0; i <= array.length; i++) {
+//        array[i+startIndex%array.length] = R.merge(array[i+startIndex%array.length], fn(array[i+startIndex%array.length]);
     }
-
-    // the good modulo (works for negative values also)
-    function mod(n, m) {
-        return ((n % m) + m) % m;
-    }
-
-    // hexagonal neighboorhood
-    for(i = 0; i < size.x; i++) {
-        for(j = 0; j < size.y; j++) {
-            // left and right neighbors
-            space[i][j].neighbors.push(space[mod(i + 1, size.x)][j]);
-            space[i][j].neighbors.push(space[mod(i - 1, size.x)][j]);
-
-            // upper neighbors
-            space[i][j].neighbors.push(space[mod(i + j%2 - 1, size.x)][mod(j + 1, size.y)]);
-            space[i][j].neighbors.push(space[mod(i + j%2, size.x)][mod(j + 1, size.y)]);
-
-            // lower neighbors
-            space[i][j].neighbors.push(space[mod(i + j%2 - 1, size.x)][mod(j - 1, size.y)]);
-            space[i][j].neighbors.push(space[mod(i + j%2, size.x)][mod(j - 1, size.y)]);
-        }
-    }
-
-    world.parameters = {
-        huntRate: 0.3
-    };
-
-    world.space = space;
-
-    return world;
-});
-
-var gameOfLife = new cellularAutomaton.createAutomat(mooreNeighborhood, lifeCell);
-
-function print () {
-    gameOfLife.applyFunc(function(cell) {
-        console.log(cell.state);
-    });
 }
 
+function shuffle(array) {
+    var currentIndex = array.length, temporaryValue, randomIndex;
 
-/*exports.init = function() {
-    gameOfLife = new cellularAutomaton.createAutomat(mooreNeighborhood, lifeCell);
-};*/
-exports.init = R.bind(gameOfLife.init, gameOfLife);
+    // While there remain elements to shuffle...
+    while (0 !== currentIndex) {
 
-exports.evolve = R.bind(gameOfLife.evolve, gameOfLife);
+        // Pick a remaining element...
+        randomIndex = Math.floor(Math.random() * currentIndex);
+        currentIndex -= 1;
 
-exports.getState = function() {
-    return gameOfLife.world.space;
-};
+        // And swap it with the current element.
+        temporaryValue = array[currentIndex];
+        array[currentIndex] = array[randomIndex];
+        array[randomIndex] = temporaryValue;
+    }
 
-exports.buttonClick = function (event) {
-    gameOfLife.world.space[event.x][event.y].futureState.alive = true;
-    gameOfLife.world.space[event.x][event.y].futureState.type = "predator";
-    gameOfLife.world.space[event.x][event.y].futureState.color = "red";
-};
-
-exports.setParameters = function (event) {
-    gameOfLife.parameters.huntRate = event.huntRate
-};
+    return array;
+}
