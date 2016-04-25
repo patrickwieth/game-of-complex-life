@@ -108,7 +108,7 @@ var lifeCell = new cellularAutomaton.createCell( function init () {
             var success = false;
             R.forEach(function (neighbor) {
                 if (neighbor.state.alive && neighbor.state.type === 'prey') {
-                    if (Math.random() > 0.38) {
+                    if (Math.random() > 0.5) {
                         neighbor.futureState.alive = true;
                         neighbor.futureState.type = 'predator';
                         neighbor.futureState.color = PREDATOR_COLOR;
@@ -240,6 +240,9 @@ function print () {
 }
 
 
+/*exports.init = function() {
+    gameOfLife = new cellularAutomaton.createAutomat(mooreNeighborhood, lifeCell);
+};*/
 exports.init = R.bind(gameOfLife.init, gameOfLife);
 
 exports.evolve = R.bind(gameOfLife.evolve, gameOfLife);
@@ -249,10 +252,11 @@ exports.getState = function() {
 };
 
 exports.buttonClick = function (event) {
+    gameOfLife.world.space[event.x][event.y].futureState.alive = true;
     gameOfLife.world.space[event.x][event.y].futureState.type = "predator";
     gameOfLife.world.space[event.x][event.y].futureState.color = "red";
 };
 
 exports.setParameters = function (event) {
     gameOfLife.parameters.huntRate = event.huntRate
-}
+};

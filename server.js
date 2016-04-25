@@ -67,7 +67,7 @@ var gameOfLife = require('./model/game-of-lotkaVolterra.js');
 
 // UPDATE PER WEBSOCKETS STUFF
 
-var timePerFrame = 50;
+var timePerFrame = 100;
 
 
 var updates = function() {

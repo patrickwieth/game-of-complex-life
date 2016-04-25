@@ -7,7 +7,7 @@ exports.createCell = Cell;
 exports.createNeighborhood = Neighborhood;
 
 /*
-erlaubte actions für eine Zelle:
+erlaubte actions fï¿½r eine Zelle:
 
 {
     action: "move"
@@ -75,7 +75,7 @@ function CellularAutomaton(neighborhood, cell) {
         this.world = this.world.metric.createSpace();
 
         this.applyFunc(function(cell) {
-            cell.init();
+            cell.state = cell.init();
         })
     };
 
