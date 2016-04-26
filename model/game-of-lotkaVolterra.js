@@ -12,16 +12,24 @@ var PREY_COLOR = "steelblue";
 var DEAD_COLOR = "white";
 var EMPTY_COLOR = "white";
 
+
 function makeDecision() {
+
+    if(!this.favDirection) this.favDirection = Math.floor(Math.random() * 6);
+    else {
+        if(this.neighbors[this.favDirection].state.type !== 'empty') this.favDirection = (this.favDirection + 3) % 6
+    }
+
+
     return {
         action: "move",
-        value: Math.floor(Math.random() * 6)
+        value: this.favDirection //Math.floor(Math.random() * 6)
     }
-};
+}
 
 var randomMover = new cellularAutomaton.createCell(
     function init() {
-        var aliveRatio = 0.1;
+        var aliveRatio = 0.01;
         var rnd = Math.random();
 
         if (rnd < aliveRatio) {
@@ -29,7 +37,8 @@ var randomMover = new cellularAutomaton.createCell(
                 color: PREY_COLOR,
                 alive: true,
                 type: 'mover',
-                energy: 0
+                energy: 0,
+                neighbors: []
             };
         }
         else {
@@ -37,7 +46,8 @@ var randomMover = new cellularAutomaton.createCell(
                 color: DEAD_COLOR,
                 alive: false,
                 type: 'empty',
-                energy: 0
+                energy: 0,
+                neighbors: []
             };
         }
     },
@@ -117,9 +127,9 @@ exports.getState = function () {
 };
 
 exports.buttonClick = function (event) {
-    gameOfLife.world.space[event.x][event.y].futureState.alive = true;
-    gameOfLife.world.space[event.x][event.y].futureState.type = "predator";
-    gameOfLife.world.space[event.x][event.y].futureState.color = "red";
+    //gameOfLife.world.space[event.x][event.y].futureState.alive = true;
+    //gameOfLife.world.space[event.x][event.y].futureState.type = "predator";
+    //gameOfLife.world.space[event.x][event.y].futureState.color = "red";
 };
 
 exports.setParameters = function (event) {

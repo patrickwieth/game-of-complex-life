@@ -43,6 +43,9 @@ function Cell(initFunction, updateFunction) {
         this.state = initFunction();
         this.futureState = initFunction();
         this.state.makeDecision = updateFunction;
+        this.state.getNeighbors = function () {
+            return this.neighbors;
+        }
     };
 
     this.init();
@@ -58,8 +61,6 @@ function Neighborhood(createSpace) {
 
 // Constructor for Cellular Automaton
 function CellularAutomaton(neighborhood, cell) {
-
-    //this.neighborhood = neighborhood;
 
     this.applyFunc = function(f) {
 
@@ -123,8 +124,8 @@ function CellularAutomaton(neighborhood, cell) {
         this.applyFunc(function(cell) {
 
             cell.state = cell.futureState;
-
             cell.futureState = cell.state;
+            cell.state.neighbors = cell.neighbors;
         });
     };
 
@@ -183,14 +184,8 @@ function CellularAutomaton(neighborhood, cell) {
         if(cell.goal === 'resolved')
             cell.futureState = emptyState;
         else
-            ;cell.futureState = cell.state;
-        // will the move resolve?
-        if(cell.futureState.type === 'empty') {
-            //moveOrCloneInto(cell);
-        }
-        else {
-            //cell.futureState = cell.state;
-        }
+            cell.futureState = cell.state;
+
     }
 
     function moveOrCloneInto(cell) {
