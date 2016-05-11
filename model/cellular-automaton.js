@@ -86,13 +86,6 @@ function CellularAutomaton(neighborhood, cell) {
         })
     };
 
-    this.updateCells = function () {
-
-        this.applyFunc(function(cell) {
-            cell.futureState = cell.update();
-        });
-    };
-
     this.realizeUpdate = function () {
 
         this.applyFunc(function(cell) {
@@ -100,12 +93,12 @@ function CellularAutomaton(neighborhood, cell) {
             //cell.state = cell.futureState;
         });
     };
-
+/*
     this.evolve = function () {
         this.realizeUpdate();
         this.updateCells();
     };
-
+*/
     this.evolve2 = function () {
 
         this.applyFunc(function(cell) {
@@ -138,7 +131,7 @@ function CellularAutomaton(neighborhood, cell) {
 
                     cell.state.energy -= 1;
                     if(cell.state.energy === 0) {
-                        cell.futureState = { type: 'empty' };
+                        cell.futureState = emptyStateS;
                     }
                 }
                 else if (cell.state.type === 'empty') {
@@ -149,7 +142,7 @@ function CellularAutomaton(neighborhood, cell) {
                     if (R.any(function (targeting) {
                             return targeting.goal.action === 'fight'
                         }, cell.targetedBy)) {
-                        cell.futureState = {type: 'empty'};
+                        cell.futureState = emptyState;
                     }
                     else cell.targetedBy = [];
 
@@ -158,7 +151,7 @@ function CellularAutomaton(neighborhood, cell) {
                     if (R.any(function (targeting) {
                             return targeting.goal.action === 'fight'
                         }, cell.targetedBy)) {
-                        cell.futureState = {type: 'empty'};
+                        cell.futureState = emptyState;
                     }
                     else cell.targetedBy = [];
                 }
@@ -166,10 +159,7 @@ function CellularAutomaton(neighborhood, cell) {
                     resolveMove(cell);
                 }
                 else if (cell.goal.action === 'clone') {
-                    // will the move be resolved? Then cell gets empty..
-                    if(cell.neighbors[cell.goal.value].state.type === 'empty') {
-                        cell.neighbors[cell.goal.value].futureState = cell.state;
-                    }
+                    resolveClone(cell);
                 }
 
             })
@@ -185,7 +175,15 @@ function CellularAutomaton(neighborhood, cell) {
             cell.futureState = emptyState;
         else
             cell.futureState = cell.state;
+    }
 
+    function resolveClone(cell) {
+        if(cell.goal === 'resolved') {
+            cell.futureState = cell.state;
+            cell.futureState.energy = 0;
+        }
+        else
+            cell.futureState = cell.state;
     }
 
     function moveOrCloneInto(cell) {

@@ -15,43 +15,53 @@ var EMPTY_COLOR = "white";
 
 function makeDecision() {
 
-    if(!this.favDirection) this.favDirection = Math.floor(Math.random() * 6);
-    else {
-        if(this.neighbors[this.favDirection].state.type !== 'empty') this.favDirection = (this.favDirection + 3) % 6
+    var neighborsAlive = 0;
+
+    for(i = 0; i < this.neighbors.length; i++) {
+        if(this.neighbors[i].state.type !== 'empty') neighborsAlive++;
     }
 
-
-    return {
-        action: "move",
-        value: this.favDirection //Math.floor(Math.random() * 6)
+    if(neighborsAlive === 0) {
+        return {
+            action: "clone",
+            value: Math.floor(Math.random() * 6)
+        }
+    }
+    else {
+        return {
+            action: "move",
+            value: Math.floor(Math.random() * 6)
+        };
     }
 }
 
 var randomMover = new cellularAutomaton.createCell(
     function init() {
-        var aliveRatio = 0.01;
-        var rnd = Math.random();
-
-        if (rnd < aliveRatio) {
-            return {
+        return {
                 color: PREY_COLOR,
-                alive: true,
                 type: 'mover',
                 energy: 0,
                 neighbors: []
-            };
-        }
-        else {
-            return {
-                color: DEAD_COLOR,
-                alive: false,
-                type: 'empty',
-                energy: 0,
-                neighbors: []
-            };
-        }
+        };
     },
     makeDecision
+);
+
+var emptyCell = new cellularAutomaton.createCell(
+    function init() {
+        return {
+            color: EMPTY_COLOR,
+            type: 'empty',
+            energy: 0,
+            neighbors: []
+        };
+    },
+    function () {
+        return {
+            action: "stay",
+            value: 0
+        };
+    }
 );
 
 
@@ -67,9 +77,8 @@ var mooreNeighborhood = new cellularAutomaton.createNeighborhood(function () {
     for (var i = 0; i < size.x; i++) {
         space.push([]);
         for (var j = 0; j < size.y; j++) {
-            space[i].push(R.clone(randomMover));
+            space[i].push(R.clone(emptyCell));
             space[i][j].init();
-
         }
     }
 
@@ -96,11 +105,12 @@ var mooreNeighborhood = new cellularAutomaton.createNeighborhood(function () {
         }
     }
 
-    world.parameters = {
-        huntRate: 0.3
-    };
-
     world.space = space;
+
+    // this is not in use, but should be!
+    world.parameters = {
+        someProperty: 0.3
+    };
 
     return world;
 });
@@ -115,9 +125,6 @@ function print() {
 }
 
 
-/*exports.init = function() {
- gameOfLife = new cellularAutomaton.createAutomat(mooreNeighborhood, lifeCell);
- };*/
 exports.init = R.bind(gameOfLife.init, gameOfLife);
 
 exports.evolve = R.bind(gameOfLife.evolve2, gameOfLife);
@@ -127,159 +134,31 @@ exports.getState = function () {
 };
 
 exports.buttonClick = function (event) {
-    //gameOfLife.world.space[event.x][event.y].futureState.alive = true;
-    //gameOfLife.world.space[event.x][event.y].futureState.type = "predator";
-    //gameOfLife.world.space[event.x][event.y].futureState.color = "red";
+
+    var newCell = new cellularAutomaton.createCell(
+        function init() {
+            return {
+                color: event.color,
+                type: 'mover',
+                energy: 0,
+                neighbors: []
+            };
+        },
+        makeDecision
+    );
+
+    gameOfLife.world.space[event.x][event.y].state = newCell.state;
+    gameOfLife.world.space[event.x][event.y].state.color = event.color;
+    gameOfLife.world.space[event.x][event.y].futureState = newCell.futureState;
+    gameOfLife.world.space[event.x][event.y].futureState.color = event.color;
+    gameOfLife.world.space[event.x][event.y].makeDecision = newCell.makeDecision;
+
 };
 
 exports.setParameters = function (event) {
-    gameOfLife.parameters.huntRate = event.huntRate
+    gameOfLife.parameters.someProperty = event.someProperty;
 };
 
-
-
-
-
-
-var predatorCell = new cellularAutomaton.createCell(function init() {
-        var huntRate = 0.3;
-
-        return {
-            color: PREDATOR_COLOR,
-            alive: true,
-            type: "predator"
-        };
-    },
-    function update() {
-        function goHunt(hunter) {
-            var success = false;
-            R.forEach(function (neighbor) {
-                if (neighbor.state.alive && neighbor.state.type === 'prey') {
-                    if (Math.random() > 0.3) {
-                        neighbor.futureState.alive = true;
-                        neighbor.futureState.type = 'predator';
-                        neighbor.futureState.color = PREDATOR_COLOR;
-
-                        success = true;
-                    }
-                }
-            }, hunter.neighbors);
-            return success;
-        }
-
-        if (this.state.alive === true) {
-            var hunting = goHunt(this);
-
-            if (hunting) return {
-                alive: true,
-                color: PREDATOR_COLOR,
-                type: 'predator'
-            };
-            else return {
-                alive: false,
-                color: CORPSE_COLOR,
-                type: 'predator'
-            };
-        }
-        else {
-            return {
-                alive: false,
-                color: CORPSE_COLOR,
-                type: 'prey'
-            };
-        }
-    }
-);
-
-var lifeCell = new cellularAutomaton.createCell(function init() {
-        var aliveRatio = 0.3;
-        var rnd = Math.random();
-        return {
-            color: rnd < aliveRatio ? PREY_COLOR : DEAD_COLOR,
-            alive: rnd < aliveRatio,
-            type: "prey"
-        };
-    },
-    function update() {
-
-        function goHunt(hunter) {
-            var success = false;
-            R.forEach(function (neighbor) {
-                if (neighbor.state.alive && neighbor.state.type === 'prey') {
-                    if (Math.random() > 0.5) {
-                        neighbor.futureState.alive = true;
-                        neighbor.futureState.type = 'predator';
-                        neighbor.futureState.color = PREDATOR_COLOR;
-
-                        success = true;
-                    }
-                }
-            }, hunter.neighbors);
-            return success;
-        }
-
-        if (this.state.type === 'predator') {
-            if (this.state.alive === true) {
-                var hunting = goHunt(this);
-
-                if (hunting) return {
-                    alive: true,
-                    color: PREDATOR_COLOR,
-                    type: 'predator'
-                };
-                else return {
-                    alive: false,
-                    color: CORPSE_COLOR,
-                    type: 'predator'
-                };
-            }
-            else {
-                return {
-                    alive: false,
-                    color: CORPSE_COLOR,
-                    type: 'prey'
-                };
-            }
-
-
-        }
-        else {
-            var neighborsAlive = 0;
-
-            R.forEach(function (neighbor) {
-                if (neighbor.state.alive && neighbor.state.type === 'prey') neighborsAlive++;
-            }, this.neighbors);
-
-            if (this.state.alive) {
-                if (this.futureState.type === 'predator') {
-                    return this.futureState;
-                }
-                else if (neighborsAlive > 6 || neighborsAlive < 2) return {
-                    alive: false,
-                    color: DEAD_COLOR,
-                    type: "prey"
-                };
-                else return {
-                        alive: true,
-                        color: PREY_COLOR,
-                        type: "prey"
-                    };
-            }
-            else {
-                if (neighborsAlive === 3 || neighborsAlive === 2) return {
-                    alive: true,
-                    color: PREY_COLOR,
-                    type: "prey"
-                };
-                else return {
-                    alive: false,
-                    color: DEAD_COLOR,
-                    type: "prey"
-                };
-            }
-        }
-    }
-);
 
 
 function mapRandomStart(fn, array) {

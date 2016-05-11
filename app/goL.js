@@ -43,7 +43,11 @@ var goL = (function(){
         var y = Math.floor(p/size.x);
         console.log(x, y);
 
-        var position = {x: x, y: y};
+        var shittyColors =  ["yellow", "blue"];
+        var colorDice = ["steelblue", "red", "green", "teal", "orange", "purple", "pink", "brown", "cyan", "magenta", "grey"];
+
+        var position = {x: x, y: y, color: colorDice[Math.floor(Math.random()*colorDice.length)]};
+
         socket.send({
             type: "buttonClick",
             value: position
