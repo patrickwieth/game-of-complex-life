@@ -1,4 +1,3 @@
-
 var R = require('ramda');
 var Promise = require("bluebird");
 
@@ -7,28 +6,28 @@ exports.createCell = Cell;
 exports.createNeighborhood = Neighborhood;
 
 /*
-erlaubte actions f�r eine Zelle:
+ erlaubte actions f�r eine Zelle:
 
-{
-    action: "move"
-    value: 0 / 1 ... / 5 (neighbor index)
-}
-{
-    action: "clone"
-    value: 0 / 1 ... / 5 (neighbor index)
-}
-{
-    action: "fight"
-    value: 0 / 1 ... / 5 (neighbor index)
-}
-{
-    action: "stay"
-    value: ""
-}
-{
-    action: "wall"
-    value: ""
-}
+ {
+ action: "move"
+ value: 0 / 1 ... / 5 (neighbor index)
+ }
+ {
+ action: "clone"
+ value: 0 / 1 ... / 5 (neighbor index)
+ }
+ {
+ action: "fight"
+ value: 0 / 1 ... / 5 (neighbor index)
+ }
+ {
+ action: "stay"
+ value: ""
+ }
+ {
+ action: "wall"
+ value: ""
+ }
 
  */
 
@@ -39,7 +38,7 @@ function Cell(initFunction, updateFunction) {
 
     this.update = updateFunction;
 
-    this.init = function() {
+    this.init = function () {
         this.state = initFunction();
         this.futureState = initFunction();
         this.state.makeDecision = updateFunction;
@@ -62,7 +61,7 @@ function Neighborhood(createSpace) {
 // Constructor for Cellular Automaton
 function CellularAutomaton(neighborhood, cell) {
 
-    this.applyFunc = function(f) {
+    this.applyFunc = function (f) {
 
         function recursion(level) {
             if (Array.isArray(level)) {
@@ -73,36 +72,32 @@ function CellularAutomaton(neighborhood, cell) {
             }
             else console.log('elemental cell should be an object, but is:' + (typeof level));
         }
+
         recursion(this.world.space);
     };
 
-    this.init = function() {
+    this.init = function () {
         this.world = {};
         this.world.metric = neighborhood;
         this.world = this.world.metric.createSpace();
 
-        this.applyFunc(function(cell) {
+        this.applyFunc(function (cell) {
             cell.init();
         })
     };
 
     this.realizeUpdate = function () {
 
-        this.applyFunc(function(cell) {
+        this.applyFunc(function (cell) {
             cell.state = R.merge(cell.state, cell.futureState);
             //cell.state = cell.futureState;
         });
     };
-/*
-    this.evolve = function () {
-        this.realizeUpdate();
-        this.updateCells();
-    };
-*/
-    this.evolve2 = function () {
 
-        this.applyFunc(function(cell) {
-            if(!isPassive(cell))
+    this.evolve = function () {
+
+        this.applyFunc(function (cell) {
+            if (!isPassive(cell))
                 cell.makeDecision();
         });
 
@@ -110,11 +105,11 @@ function CellularAutomaton(neighborhood, cell) {
 
         this.resolveActions();
 
-        this.updateCells2();
+        this.updateCells();
     };
 
-    this.updateCells2 = function() {
-        this.applyFunc(function(cell) {
+    this.updateCells = function () {
+        this.applyFunc(function (cell) {
 
             cell.state = cell.futureState;
             cell.futureState = cell.state;
@@ -123,62 +118,80 @@ function CellularAutomaton(neighborhood, cell) {
     };
 
     this.resolveActions = function () {
-        this.applyFunc(function(cell) {
 
-                if (cell.state.type === 'wall') {
-                    // wall cannot be targeted
-                    cell.targetedBy = [];
+        //first resolve all but fighting
+        this.applyFunc(function (cell) {
+            if (cell.state.type === 'wall') {
+                // wall cannot be targeted
+                cell.targetedBy = [];
 
-                    cell.state.energy -= 1;
-                    if(cell.state.energy === 0) {
-                        cell.futureState = emptyStateS;
-                    }
+                cell.state.energy -= 1;
+                if (cell.state.energy === 0) {
+                    cell.futureState = emptyStateS;
                 }
-                else if (cell.state.type === 'empty') {
-                    resolveEmpty(cell);
-                }
-                else if (cell.goal.action === 'stay') {
-                    // if fighters are there, cell dies
-                    if (R.any(function (targeting) {
-                            return targeting.goal.action === 'fight'
-                        }, cell.targetedBy)) {
-                        cell.futureState = emptyState;
-                    }
-                    else cell.targetedBy = [];
+            }
+            else if (cell.state.type === 'empty') {
+                resolveEmpty(cell);
+            }
+            else if (cell.goal.action === 'stay') {
+                resolveStay(cell);
+            }
+            else if (cell.goal.action === 'move') {
+                resolveMove(cell);
+            }
+            else if (cell.goal.action === 'clone') {
+                resolveClone(cell);
+            }
 
-                }
-                else if (cell.goal.action === 'fight') {
-                    if (R.any(function (targeting) {
-                            return targeting.goal.action === 'fight'
-                        }, cell.targetedBy)) {
-                        cell.futureState = emptyState;
-                    }
-                    else cell.targetedBy = [];
-                }
-                else if (cell.goal.action === 'move'){
-                    resolveMove(cell);
-                }
-                else if (cell.goal.action === 'clone') {
-                    resolveClone(cell);
-                }
+        });
 
-            })
+        // then resolve fighting
+        this.applyFunc(function (cell) {
+            function isFought(cell) {
+                return R.any(function (targeting) {
+                    return targeting.goal.action === 'fight'
+                }, cell.targetedBy);
+            }
 
+            if (!isPassive(cell) && cell.goal.action === 'fight') {
+                if (isFought(cell)) {
+                    cell.futureState = emptyState;
+                }
+                else cell.targetedBy = [];
+
+                if(isDestructible(cell.neighbors[cell.goal.value])) {
+                    cell.neighbors[cell.goal.value].futureState = emptyState;
+                }
+            }
+        });
     };
 
     function resolveEmpty(cell) {
         moveOrCloneInto(cell);
     }
 
-    function resolveMove(cell) {
-        if(cell.goal === 'resolved')
+    function resolveStay(cell) {
+
+        // if fighters are there, cell dies
+        if (R.any(function (targeting) {
+                return targeting.goal.action === 'fight'
+            }, cell.targetedBy)) {
             cell.futureState = emptyState;
-        else
+        }
+        else cell.targetedBy = [];
+
+    }
+
+    function resolveMove(cell) {
+        if (cell.goal === 'resolved')
+            cell.futureState = emptyState;
+        else {
             cell.futureState = cell.state;
+        }
     }
 
     function resolveClone(cell) {
-        if(cell.goal === 'resolved') {
+        if (cell.goal === 'resolved') {
             cell.futureState = cell.state;
             cell.futureState.energy = 0;
         }
@@ -191,12 +204,12 @@ function CellularAutomaton(neighborhood, cell) {
         var validActions = R.filter(function (targeting) {
             return targeting.goal.action === 'clone' || targeting.goal.action === 'move';
         }, cell.targetedBy);
-        if(validActions.length > 0) {
+        if (validActions.length > 0) {
             // pick one of these actions at random
-            var pickedAction = validActions[Math.floor(Math.random()*validActions.length)];
+            var pickedAction = validActions[Math.floor(Math.random() * validActions.length)];
 
             // if it is move, then remove the cell from its origin point
-            if(pickedAction.goal.action === 'move') {
+            if (pickedAction.goal.action === 'move') {
                 pickedAction.futureState = emptyState;
                 pickedAction.goal = 'resolved';
             }
@@ -207,14 +220,14 @@ function CellularAutomaton(neighborhood, cell) {
 
         }
         else {
-            if(cell.futureState !== 'empty')            cell.futureState = cell.state;
+            if (cell.futureState !== 'empty')            cell.futureState = cell.state;
         }
     }
 
     this.registerActions = function () {
 
-        this.applyFunc(function(cell) {
-            if(!isPassive(cell)) {
+        this.applyFunc(function (cell) {
+            if (!isPassive(cell)) {
                 var actionFn = {
                     move: registerTarget,
                     clone: registerTarget,
@@ -228,7 +241,7 @@ function CellularAutomaton(neighborhood, cell) {
     };
 
     function registerTarget(cell) {
-        if(cell.goal.value >= 0 && cell.goal.value < cell.neighbors.length ) {
+        if (cell.goal.value >= 0 && cell.goal.value < cell.neighbors.length) {
             cell.neighbors[cell.goal.value].targetedBy.push(cell);
         }
         else stay(cell);
@@ -246,6 +259,10 @@ function CellularAutomaton(neighborhood, cell) {
         return cell.state.type === 'wall' || cell.state.type === 'empty';
     }
 
+        function isDestructible(cell) {
+            return cell.state.type !== 'wall' && cell.state.type === 'empty';
+        }
+
     this.init();
 }
 
@@ -253,5 +270,6 @@ var emptyState = {
     color: 'white',
     type: 'empty',
     energy: 0,
-    makeDecision: function() {}
+    makeDecision: function () {
+    }
 };

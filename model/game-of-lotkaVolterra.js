@@ -127,7 +127,7 @@ function print() {
 
 exports.init = R.bind(gameOfLife.init, gameOfLife);
 
-exports.evolve = R.bind(gameOfLife.evolve2, gameOfLife);
+exports.evolve = R.bind(gameOfLife.evolve, gameOfLife);
 
 exports.getState = function () {
     return gameOfLife.world.space;
