@@ -29,7 +29,7 @@ function makeDecision() {
     }
     else {
         return {
-            action: "move",
+            action: "fight",
             value: Math.floor(Math.random() * 6)
         };
     }
