@@ -7,59 +7,15 @@ var R = require('ramda');
 var cellularAutomaton = require('./cellular-automaton.js');
 
 var CORPSE_COLOR = "black";
-var PREDATOR_COLOR = "red";
-var PREY_COLOR = "steelblue";
-var DEAD_COLOR = "white";
 var EMPTY_COLOR = "white";
 
-
-function makeDecision() {
-
-    var neighborsAlive = 0;
-
-    for(i = 0; i < this.neighbors.length; i++) {
-        if(this.neighbors[i].state.type !== 'empty') neighborsAlive++;
-    }
-
-    if(neighborsAlive === 0) {
-        return {
-            action: "clone",
-            value: Math.floor(Math.random() * 6)
-        }
-    }
-    else {
-        return {
-            action: "fight",
-            value: Math.floor(Math.random() * 6)
-        };
-    }
-}
-
-var randomMover = new cellularAutomaton.createCell(
-    function init() {
-        return {
-                color: PREY_COLOR,
-                type: 'mover',
-                energy: 0,
-                neighbors: []
-        };
-    },
-    makeDecision
-);
 
 var emptyCell = new cellularAutomaton.createCell(
     function init() {
         return {
             color: EMPTY_COLOR,
-            type: 'empty',
-            energy: 0,
-            neighbors: []
-        };
-    },
-    function () {
-        return {
-            action: "stay",
-            value: 0
+            species: 'empty',
+            energy: 0
         };
     }
 );
@@ -78,7 +34,6 @@ var mooreNeighborhood = new cellularAutomaton.createNeighborhood(function () {
         space.push([]);
         for (var j = 0; j < size.y; j++) {
             space[i].push(R.clone(emptyCell));
-            space[i][j].init();
         }
     }
 
@@ -115,7 +70,7 @@ var mooreNeighborhood = new cellularAutomaton.createNeighborhood(function () {
     return world;
 });
 
-var gameOfLife = new cellularAutomaton.createAutomat(mooreNeighborhood, randomMover);
+var gameOfLife = new cellularAutomaton.createAutomat(mooreNeighborhood);
 
 
 function print() {
@@ -129,36 +84,80 @@ exports.init = R.bind(gameOfLife.init, gameOfLife);
 
 exports.evolve = R.bind(gameOfLife.evolve, gameOfLife);
 
+exports.registerDecisions = function(species, decisions) {
+    gameOfLife.decisions[species] = decisions;
+};
+
 exports.getState = function () {
     return gameOfLife.world.space;
 };
 
-exports.buttonClick = function (event) {
+exports.killAll = function (species) {
+    gameOfLife.applyFunc(function (cell) {
+        if(cell.state.species == species) cell.kill();
+    });
+};
+
+/*
+function makeDecision() {
+
+    return {
+        action: "clone",
+        value: Math.floor(Math.random()*6)
+    };
+
+    var freeNeighbors = [];
+
+    for(i = 0; i < this.neighbors.length; i++) {
+        if(this.neighbors[i].state.species !== 'empty') {
+            if(this.neighbors[i].state.color !== this.color) {
+                return {
+                    action: "fight",
+                    value: i
+                };
+            }
+        }
+        else {
+            freeNeighbors.push(i);
+        }
+    }
+
+    if(freeNeighbors.length > 0) {
+        return {
+            action: "clone",
+            value: freeNeighbors[Math.floor(Math.random()*freeNeighbors.length)]
+        }
+    }
+    else {
+        return {
+            action: "stay",
+            value: Math.floor(Math.random() * 6)
+        };
+    }
+}
+*/
+exports.newSpecies = function (clientId, event) {
+
+    gameOfLife.decisions[event.species] = [];
 
     var newCell = new cellularAutomaton.createCell(
         function init() {
             return {
                 color: event.color,
-                type: 'mover',
-                energy: 0,
-                neighbors: []
+                species: event.species,
+                energy: 0
             };
-        },
-        makeDecision
+        }
     );
 
-    gameOfLife.world.space[event.x][event.y].state = newCell.state;
-    gameOfLife.world.space[event.x][event.y].state.color = event.color;
-    gameOfLife.world.space[event.x][event.y].futureState = newCell.futureState;
-    gameOfLife.world.space[event.x][event.y].futureState.color = event.color;
-    gameOfLife.world.space[event.x][event.y].makeDecision = newCell.makeDecision;
+    gameOfLife.world.space[event.position.x][event.position.y].state = newCell.state;
+    gameOfLife.world.space[event.position.x][event.position.y].futureState = newCell.futureState;
 
 };
 
 exports.setParameters = function (event) {
     gameOfLife.parameters.someProperty = event.someProperty;
 };
-
 
 
 function mapRandomStart(fn, array) {

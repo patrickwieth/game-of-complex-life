@@ -25,12 +25,12 @@
         path {
             transition: fill 1s ease;
         }
-        */
+    */
     </style>
 </head>
 <body>
-    Set hunting rate: <select onchange="changeUniv(this)"></select>
-    <input type="number" onchange="setHuntRate(this)"/>
+    Set nothing here: <select onchange="changeUniv(this)"></select>
+    <input type="string" onchange="setName(this)"/>
     <button type="button" onClick="newUniv()">New</button>
     <button type="button" onClick="startUniv()" id='startBtn'>Stop</button>
 </section>
@@ -43,19 +43,22 @@
 <script src="goL.js"></script>
 
 <script>
-    function setHuntRate(rate) {
-        socket.send({
+    var name = "none";
+    var newName = "none";
+
+    function setName(string) {
+
+        newName = string.value;
+        /*socket.send({
             type: "setParameters",
-            huntRate: rate
-        });
+            huntRate: name
+        });*/
     }
 
     function newUniv(){
         console.log("newUniv()");
 
         socket.send("reset");
-
-        //goL.setGrid();
     }
 
     function startUniv(){
@@ -73,10 +76,24 @@
 
     var socket = io.connect();
 
-    socket.on('state', function (data) {
-        var stuff = JSON.parse(data);
+    // get registered
+    var myKey;
+    socket.on('message', function (event) {
+        if(typeof event === 'object') {
+            if (typeof event.key === 'string') {
+                myKey = event.key;
+                console.log(myKey);
+            }
+        }
+    });
 
-        goL.setGrid(stuff);
+    // state of the game updates
+    socket.on('state', function (data) {
+
+        goL.setGrid(data);
+
+        var decisions = goL.makeDecisions();
+        socket.send({ type: "decisions", key: myKey, value: decisions });
     });
 
 </script>

@@ -114,7 +114,7 @@ exports.getState = function() {
     return gameOfLife.world.space;
 };
 
-exports.buttonClick = function (event) {
+exports.newSpecies = function (event) {
     gameOfLife.world.space[event.x][event.y].futureState.alive = true;
 };
 
