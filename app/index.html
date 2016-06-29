@@ -30,7 +30,7 @@
 </head>
 <body>
     Set nothing here: <select onchange="changeUniv(this)"></select>
-    <input type="string" onchange="setName(this)"/>
+    <input type="string" onchange="setDecisionFunction(this)" value='return { action: "move", value: 1 };'/>
     <button type="button" onClick="newUniv()">New</button>
     <button type="button" onClick="startUniv()" id='startBtn'>Stop</button>
 </section>
@@ -42,9 +42,71 @@
 
 <script src="goL.js"></script>
 
+
+
 <script>
     var name = "none";
     var newName = "none";
+
+    function setDecisionFunction(fn) {
+        console.log("jor");
+
+        try{
+            var decisionFunction = eval(fn.value);
+        }
+        catch(bla) {
+            console.log(bla);
+        }
+
+
+        // here a check should be run
+        var testCell = {state: {
+            color: "green",
+            energy: 2,
+            species: "test"
+            },
+            neighbors: [
+                {state: {
+                    color: "green",
+                    energy: 2,
+                    species: "test"}
+                },
+                {state: {
+                    color: "blue",
+                    energy: 2,
+                    species: "test2"}
+                },
+                {state: {
+                    color: "white",
+                    energy: 0,
+                    species: "empty"}
+                },
+                {state: {
+                    color: "white",
+                    energy: 0,
+                    species: "empty"}
+                },
+                {state: {
+                    color: "brown",
+                    energy: 2,
+                    species: "wall"}
+                },
+                {state: {
+                    color: "purple",
+                    energy: 1,
+                    species: "test3"}
+                }
+            ]
+        };
+
+        var testResult = decisionFunction(testCell);
+
+        if(typeof testResult === 'object' && testResult.action && testResult.value) {
+            goL.decisionFunction = decisionFunction;
+            console.log("new decision function set");
+        }
+        else console.log("failed to set decision function");
+    }
 
     function setName(string) {
 
@@ -89,7 +151,6 @@
 
     // state of the game updates
     socket.on('state', function (data) {
-
         goL.setGrid(data);
 
         var decisions = goL.makeDecisions();

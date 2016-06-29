@@ -160,7 +160,7 @@ var goL = (function () {
         for(var i = 0; i < size.x; i++) {
             for(var j = 0; j < size.y; j++) {
                 if(isOwned(space[i][j])) {
-                    decisions.push(makeDecision(space[i][j]));
+                    decisions.push(goL.decisionFunction(space[i][j]));
                 }
             }
         }
@@ -168,8 +168,7 @@ var goL = (function () {
         return decisions;
     };
 
-    function makeDecision(cell) {
-
+    goL.decisionFunction = function(cell) {
         var freeNeighbors = [];
 
         for(i = 0; i < cell.neighbors.length; i++) {
@@ -198,7 +197,7 @@ var goL = (function () {
                 value: Math.floor(Math.random() * 6)
             };
         }
-    }
+    };
 
     return goL;
 }());
