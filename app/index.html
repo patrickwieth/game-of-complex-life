@@ -30,7 +30,7 @@
 </head>
 <body>
     Set nothing here: <select onchange="changeUniv(this)"></select>
-    <input type="string" onchange="setDecisionFunction(this)" value='return { action: "move", value: 1 };'/>
+    <input type="string" onchange="setDecisionFunction(this)" value='function() { return { action: "move", value: 1 }; }'/>
     <button type="button" onClick="newUniv()">New</button>
     <button type="button" onClick="startUniv()" id='startBtn'>Stop</button>
 </section>
@@ -49,7 +49,9 @@
     var newName = "none";
 
     function setDecisionFunction(fn) {
-        console.log("jor");
+        fn.value = "("+fn.value+")";
+
+        console.log("fn:", fn);
 
         try{
             var decisionFunction = eval(fn.value);
