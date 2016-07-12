@@ -64,7 +64,16 @@ var mooreNeighborhood = new cellularAutomaton.createNeighborhood(function () {
 
     // this is not in use, but should be!
     world.parameters = {
-        someProperty: 0.3
+
+        energy: {
+            stay: 1,
+            move: 2,
+            fight: 4,
+            clone: 10,
+            wall: 1,
+            fromEmptyCells: 1,
+            fromSun: 0
+        }
     };
 
     return world;

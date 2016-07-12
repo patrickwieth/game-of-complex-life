@@ -9,23 +9,23 @@ exports.createNeighborhood = Neighborhood;
  erlaubte actions f�r eine Zelle:
 
  {
- action: "move"
+ action: "move",
  value: 0 / 1 ... / 5 (neighbor index)
  }
  {
- action: "clone"
+ action: "clone",
  value: 0 / 1 ... / 5 (neighbor index)
  }
  {
- action: "fight"
+ action: "fight",
  value: 0 / 1 ... / 5 (neighbor index)
  }
  {
- action: "stay"
+ action: "stay",
  value: ""
  }
  {
- action: "wall"
+ action: "wall",
  value: ""
  }
  */
@@ -42,8 +42,18 @@ function Cell(initFunction) {
 
     this.init();
 
-    this.setGoal = function (goal) {
-        this.goal = goal;
+    this.setGoal = function (goal, params) {
+        // only set the goal if there is enough energy, else "stay" is the default action (should be least energy consuming also)
+        if(params && this.state.energy >= params.energy[goal.action]) {
+            this.goal = goal;
+        }
+        else {
+            this.goal =  {
+                action: "stay",
+                value: 0
+            };
+        }
+
     };
 
     this.kill = function () {
@@ -92,35 +102,35 @@ function CellularAutomaton(neighborhood) {
         this.registerActions();
         this.resolveActions();
         this.updateCells();
-
-        console.log("cells updated");
     };
 
     this.setGoals = function () {
         var speciesCounter = {};
 
         var theDecisions = this.decisions;
+        var theParameters = this.world.parameters;
 
         this.applyFunc(function (cell) {
             if (!isPassive(cell)) {
-
+                // add species to the speciesCounter if entry does not exist or count up by 1 if the species exists in the counter already
                 speciesCounter[cell.state.species] = speciesCounter[cell.state.species] ? speciesCounter[cell.state.species] + 1 : 1;
 
+                // pick out the relevant list of decisions
                 decisionsForThisSpecies = theDecisions[cell.state.species];
 
-                // check if there are decisions left
+                // check if there are decisions left (if not cell will do nothing)
                 if(decisionsForThisSpecies.length > 0) {
-                    cell.setGoal(decisionsForThisSpecies[0]);
+                    cell.setGoal(decisionsForThisSpecies[0], theParameters);
                     decisionsForThisSpecies.splice(0, 1);
                 }
                 else {
-                    //console.log("no decisions left for species "+cell.state.species);
-                    cell.setGoal({action: "stay", value: 0});
+                    console.log("no decisions left for species "+cell.state.species+" this happens if not enough decisions were sent to server...");
+                    cell.setGoal({}, 0);
                 }
             }
         });
 
-        console.log(speciesCounter);
+        console.log("species counter: ", speciesCounter);
     };
 
     this.registerActions = function () {
@@ -150,28 +160,33 @@ function CellularAutomaton(neighborhood) {
 
     this.resolveActions = function () {
 
+        var theParameters = this.world.parameters;
+
         //first resolve all but fighting
         this.applyFunc(function (cell) {
             if (cell.state.species === 'wall') {
-                resolveWall(cell);
+                resolveWall(cell, theParameters.energy.stay);
             }
             else if (cell.state.species === 'empty') {
                 resolveEmpty(cell);
             }
             else if (cell.goal.action === 'stay') {
-                resolveStay(cell);
+                resolveStay(cell, theParameters.energy.stay);
             }
             else if (cell.goal.action === 'move') {
-                resolveMove(cell);
+                resolveMove(cell, theParameters.energy.move);
             }
             else if (cell.goal.action === 'clone') {
-                resolveClone(cell);
+                resolveClone(cell, theParameters.energy.clone);
+            }
+            else if (cell.goal.action === 'fight') {
+                resolveFight(cell, theParameters.energy.fight);
             }
         });
 
         // then resolve fighting
         this.applyFunc(function (cell) {
-            resolveFight(cell);
+            resolveBeingAttacked(cell);
         });
     };
 
@@ -179,7 +194,6 @@ function CellularAutomaton(neighborhood) {
         // wall cannot be targeted
         cell.targetedBy = [];
 
-        cell.state.energy -= 1;
         if (cell.state.energy === 0) {
             cell.futureState = emptyState;
         }
@@ -205,34 +219,43 @@ function CellularAutomaton(neighborhood) {
         }
     }
 
-    function resolveStay(cell) {
+    function resolveStay(cell, energyConsumed) {
         // if fighters are there, cell dies
         if (R.any(function (targeting) {
                 return targeting.goal.action === 'fight'
             }, cell.targetedBy)) {
             cell.futureState = emptyState;
         }
-        else cell.targetedBy = [];
+        else {
+            cell.targetedBy = [];
+            cell.futureState.energy = cell.state.energy - energyConsumed;
+        }
     }
 
-    function resolveMove(cell) {
+    function resolveMove(cell, energyConsumed) {
         if (cell.goal === 'resolved')
             cell.futureState = emptyState;
         else {
             cell.futureState = cell.state;
+            cell.futureState.energy = cell.state.energy - energyConsumed;
         }
     }
 
-    function resolveClone(cell) {
+    function resolveClone(cell, energyConsumed) {
         if (cell.goal === 'resolved') {
             cell.futureState = cell.state;
-            cell.futureState.energy = 0;
+            cell.futureState.energy = cell.state.energy - energyConsumed;
         }
         else
             cell.futureState = cell.state;
+            cell.futureState.energy = cell.state.energy - energyConsumed;
     }
 
-    function resolveFight(cell) {
+    function resolveFight(cell, energyConsumed) {
+        cell.futureState.energy = cell.state.energy - energyConsumed;
+    }
+
+    function resolveBeingAttacked(cell, energyConsumed) {
         function isFought(cell) {
             return R.any(function (targeting) {
                 return targeting.goal.action === 'fight'
@@ -245,10 +268,27 @@ function CellularAutomaton(neighborhood) {
     }
 
     this.updateCells = function () {
-        this.applyFunc(function (cell) {
+        var theParameters = this.world.parameters;
 
+        function addEnergy(cell) {
+            if(theParameters.energy.fromEmptyCells) {
+                var emptyNeighbors = 0;
+                cell.neighbors.forEach(function(neighbor) {
+                    if(neighbor.state.species === 'empty') emptyNeighbors++;
+                });
+                cell.state.energy += emptyNeighbors * theParameters.energy.fromEmptyCells;
+            }
+            if(theParameters.energy.fromSun && true /* sunShines() */) {
+                cell.state.energy += theParameters.energy.fromSun;
+            }
+        }
+
+        this.applyFunc(function (cell) {
             cell.state = R.merge(cell.state, cell.futureState);
-            //cell.state = cell.futureState;
+            //cell.state = cell.futureState; // in the past this was not merged and just overwritten
+
+            // also adjust energy
+            addEnergy(cell);
         });
     };
 
