@@ -1,0 +1,48 @@
+
+body{
+    width:1200px;
+    margin:0 auto;
+}
+rect{
+    stroke:rgba(204, 204,204,0.2);
+    shape-rendering:crispEdges;
+}
+.edit:hover{
+    stroke:steelblue;
+    cursor:pointer;
+}
+select{
+    width:80px;
+}
+button{
+    min-width:50px;
+    padding: 0 40px;
+}
+
+aside {
+    position: absolute;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    width: 30%;
+}
+
+section {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 70%;
+}
+
+.controls .input-decision {
+    display: block;
+    height: 50%;
+    width: 100%;
+}
+
+/*
+    path {
+        transition: fill 1s ease;
+    }
+*/
