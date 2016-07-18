@@ -152,7 +152,7 @@ function CellularAutomaton(neighborhood) {
         if (cell.goal.value >= 0 && cell.goal.value < cell.neighbors.length) {
             cell.neighbors[cell.goal.value].targetedBy.push(cell);
         }
-        else stay(cell);
+        else cell.goal.action = "stay";
     }
 
     function registerNothing(cell) {
@@ -216,6 +216,7 @@ function CellularAutomaton(neighborhood) {
 
             // copy targeting cell into future state of targeted cell
             cell.futureState = pickedAction.state;
+            cell.futureState.energy = 1;
         }
     }
 
@@ -229,6 +230,11 @@ function CellularAutomaton(neighborhood) {
         else {
             cell.targetedBy = [];
             cell.futureState.energy = cell.state.energy - energyConsumed;
+
+            // death from exhaustion
+            if(cell.futureState.energy < 0) {
+                cell.futureState = emptyState;
+            }
         }
     }
 

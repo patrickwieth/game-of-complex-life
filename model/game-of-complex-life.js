@@ -107,44 +107,6 @@ exports.killAll = function (species) {
     });
 };
 
-/*
-function makeDecision() {
-
-    return {
-        action: "clone",
-        value: Math.floor(Math.random()*6)
-    };
-
-    var freeNeighbors = [];
-
-    for(i = 0; i < this.neighbors.length; i++) {
-        if(this.neighbors[i].state.species !== 'empty') {
-            if(this.neighbors[i].state.color !== this.color) {
-                return {
-                    action: "fight",
-                    value: i
-                };
-            }
-        }
-        else {
-            freeNeighbors.push(i);
-        }
-    }
-
-    if(freeNeighbors.length > 0) {
-        return {
-            action: "clone",
-            value: freeNeighbors[Math.floor(Math.random()*freeNeighbors.length)]
-        }
-    }
-    else {
-        return {
-            action: "stay",
-            value: Math.floor(Math.random() * 6)
-        };
-    }
-}
-*/
 exports.newSpecies = function (clientId, event) {
 
     gameOfLife.decisions[event.species] = [];
@@ -154,7 +116,7 @@ exports.newSpecies = function (clientId, event) {
             return {
                 color: event.color,
                 species: event.species,
-                energy: 0
+                energy: 10
             };
         }
     );
