@@ -61,13 +61,13 @@ class Neighborhood(object):
 class CellularAutomaton(object):
     def applyFunc(self, f):
         def recursion(level):
-            if isinstance(level, list):  # (Array.isArray(level)) TODO was hier?
+            if isinstance(level, list):
                 for l in level:
                     recursion(l)
             elif str(type(level)) == "<class 'cellularAutomaton.Cell'>":  # TODO unschön
                 f(level)
             else:
-                print('elemental cell should be an object, but is:' + str(type(level)))  # console.log in js
+                print('elemental cell should be an object, but is:' + str(type(level)))
 
         recursion(self.world['space'])
 
@@ -91,10 +91,17 @@ class CellularAutomaton(object):
         self.init()
 
     def evolve(self):
+        self.resetTargetBy()
         self.setGoals()
         self.registerActions()
         self.resolveActions()
         self.updateCells()
+
+    def resetTargetBy(self):
+        def func(cell):
+            cell.targetedBy = []
+
+        self.applyFunc(func)
 
     def setGoals(self):
         speciesCounter = {}
@@ -116,14 +123,14 @@ class CellularAutomaton(object):
                 # check if there are decisions left (if not cell will do nothing)
                 if len(decisionsForThisSpecies) > 0:
                     cell.setGoal(decisionsForThisSpecies[0], theParameters)
-                    decisionsForThisSpecies = decisionsForThisSpecies[1:]
+                    theDecisions[cell.state['species']] = theDecisions[cell.state['species']][1:]
                 else:
                     print(
                         "no decisions left for species " + cell.state[
                             'species'] + " this happens if not enough decisions were sent to server...")  # console.log
-                    cell.setGoal({}, 0)
+                    cell.setGoal({'action': 'stay', 'value': 0}, theParameters)
             else:
-                cell.setGoal({'action': 'stay', 'value': ''}, theParameters)
+                cell.setGoal({'action': 'stay', 'value': 0}, theParameters)
 
         self.applyFunc(func)
 
@@ -250,7 +257,8 @@ class CellularAutomaton(object):
             # return ramba.any(func, cell.targetedBy)  # TODO ramba
 
         if (self.isDestructible(cell) == False) & (isFought(cell)):
-            cell.futureState = deadState
+            #cell.futureState = deadState
+            cell.kill()
 
     def updateCells(self):
         theParameters = self.world['parameters']

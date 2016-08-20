@@ -6,27 +6,31 @@ import numpy as np
 mooreNeighborhood = ca.Neighborhood(gocl.initNeighborhood)
 gameOfLife = ca.CellularAutomaton(mooreNeighborhood)
 
-init = gameOfLife.init
 evolve = gameOfLife.evolve
 
 
 def makeDecision(cell):
+    if cell.state['species'] == 'empty':
+        return {'action': "stay", 'value': 0}
+
     if cell.state['species'] == 'OnlyClone':
         return {'action': "clone", 'value': int(np.random.ranf() * 6)}
 
     if cell.state['species'] == 'CloneAndAttack':
         freeNeighbors = []
         for i in range(len(cell.neighbors)):
-            if (cell.neighbors[i].state['species'] != 'empty') & (cell.neighbors[i].state['species'] != cell.state['species']):
-                if cell.neighbors[i].state['color'] != cell.state['color']:
-                    return {'action': 'fight', 'value': i}
+            if cell.neighbors[i].state['species'] != 'empty':
+                if cell.neighbors[i].state['species'] != cell.state['species']:
+                    if cell.neighbors[i].state['color'] != cell.state['color']:
+                        #print("attack ",cell.state['species'],cell.neighbors[i].state['species'])
+                        return {'action': 'fight', 'value': i}
             else:
                 freeNeighbors.append(i)
 
         if (len(freeNeighbors) > 0):
             return {'action': "clone", 'value': freeNeighbors[int(np.random.ranf() * len(freeNeighbors))]}
-        else:
-            return {'action': "stay", 'value': int(np.random.ranf() * 6)}
+
+        return {'action': "stay", 'value': 0}
 
     return {'action': "clone", 'value': int(np.random.ranf() * 6)}
 
@@ -46,27 +50,50 @@ def newSpecies(clientId, event):
 
 gameOfLife.parameters = gameOfLife.world['parameters']
 newSpecies(np.random.randint(0, 10), {'species': 'OnlyClone', 'color': 'Blue', 'position': {'x': 0, 'y': 0}})
-newSpecies(np.random.randint(0, 10), {'species': 'OnlyClone', 'color': 'Blue', 'position': {'x': 0, 'y': 1}})
 newSpecies(np.random.randint(0, 10), {'species': 'CloneAndAttack', 'color': 'Green', 'position': {'x': 2, 'y': 2}})
+
+def recursionDecision(level,output):
+    if isinstance(level, list):
+        for l in level:
+            recursionDecision(l,output)
+    elif str(type(level)) == "<class 'cellularAutomaton.Cell'>":  # TODO unschön
+        try:
+            output[level.state['species']].append(makeDecision(level))
+        except:
+            output[level.state['species']] = [makeDecision(level)]
+    else:
+        print('elemental cell should be an object, but is:' + str(type(level)))  # console.log in js
 
 for _ in range(10):
     dec = {}
-    for j, n in enumerate(gameOfLife.world["space"]):
-        for i, m in enumerate(n):
-            if m.state['species'] != 'empty':
-                try:
-                    dec[m.state['species']].append(makeDecision(m))
-                except:
-                    dec[m.state['species']] = [makeDecision(m)]
-    print(dec)
+    recursionDecision(gameOfLife.world['space'],dec)
+    """print(dec['empty'])
+    try: print('OnlyClone',dec['OnlyClone'])
+    except: pass
+    try: print('CloneAndAttack',dec['CloneAndAttack'])
+    except: pass"""
     gameOfLife.decisions = dec
     gameOfLife.setGoals()
-    gameOfLife.registerActions()
     for j, n in enumerate(gameOfLife.world["space"]):
         for i, m in enumerate(n):
             print(
                 '{:2d} {:2d} {:15s} {:5s} {:8s} {:2d}'.format(j, i, m.state['species'], m.state['color'], m.goal['action'], m.state['energy']))
+            if m.goal['action'] == 'fight':
+                pass
+                #print(m.neighbors[int(m.goal['value'])].state['species'])
+    dec = {}
+    recursionDecision(gameOfLife.world['space'],dec)
+    gameOfLife.decisions = dec
     evolve()
+
+dec = {}
+recursionDecision(gameOfLife.world['space'],dec)
+"""try: print('OnlyClone',dec['OnlyClone'])
+except: pass
+try: print('CloneAndAttack',dec['CloneAndAttack'])
+except: pass"""
+gameOfLife.decisions = dec
+gameOfLife.setGoals()
 for j, n in enumerate(gameOfLife.world["space"]):
     for i, m in enumerate(n):
         print(
@@ -127,3 +154,11 @@ def shuffle(array):
         array[randomIndex] = temporaryValue
 
     return array
+
+exit()
+for i, m in enumerate(n):
+            if m.state['species'] != 'empty':
+                try:
+                    dec[m.state['species']].append(makeDecision(m))
+                except:
+                    dec[m.state['species']] = [makeDecision(m)]
