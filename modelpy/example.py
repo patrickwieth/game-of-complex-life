@@ -17,7 +17,7 @@ def makeDecision(cell):
     if cell.state['species'] == 'CloneAndAttack':
         freeNeighbors = []
         for i in range(len(cell.neighbors)):
-            if cell.neighbors[i].state['species'] != 'empty':
+            if (cell.neighbors[i].state['species'] != 'empty') & (cell.neighbors[i].state['species'] != cell.state['species']):
                 if cell.neighbors[i].state['color'] != cell.state['color']:
                     return {'action': 'fight', 'value': i}
             else:
@@ -49,12 +49,10 @@ newSpecies(np.random.randint(0, 10), {'species': 'OnlyClone', 'color': 'Blue', '
 newSpecies(np.random.randint(0, 10), {'species': 'OnlyClone', 'color': 'Blue', 'position': {'x': 0, 'y': 1}})
 newSpecies(np.random.randint(0, 10), {'species': 'CloneAndAttack', 'color': 'Green', 'position': {'x': 2, 'y': 2}})
 
-for _ in range(20):
+for _ in range(10):
     dec = {}
     for j, n in enumerate(gameOfLife.world["space"]):
         for i, m in enumerate(n):
-            print(
-                '{:2d} {:2d} {:15s} {:5s} {:8s} {:2d}'.format(j, i, m.state['species'], m.state['color'], m.goal['action'], m.state['energy']))
             if m.state['species'] != 'empty':
                 try:
                     dec[m.state['species']].append(makeDecision(m))
@@ -62,6 +60,12 @@ for _ in range(20):
                     dec[m.state['species']] = [makeDecision(m)]
     print(dec)
     gameOfLife.decisions = dec
+    gameOfLife.setGoals()
+    gameOfLife.registerActions()
+    for j, n in enumerate(gameOfLife.world["space"]):
+        for i, m in enumerate(n):
+            print(
+                '{:2d} {:2d} {:15s} {:5s} {:8s} {:2d}'.format(j, i, m.state['species'], m.state['color'], m.goal['action'], m.state['energy']))
     evolve()
 for j, n in enumerate(gameOfLife.world["space"]):
     for i, m in enumerate(n):

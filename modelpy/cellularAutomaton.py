@@ -122,6 +122,8 @@ class CellularAutomaton(object):
                         "no decisions left for species " + cell.state[
                             'species'] + " this happens if not enough decisions were sent to server...")  # console.log
                     cell.setGoal({}, 0)
+            else:
+                cell.setGoal({'action': 'stay', 'value': ''}, theParameters)
 
         self.applyFunc(func)
 
