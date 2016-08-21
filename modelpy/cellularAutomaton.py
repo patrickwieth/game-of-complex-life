@@ -50,6 +50,7 @@ class Cell(object):
     def kill(self):
         self.state = deadState
         self.futureState = emptyState
+        self.goal = {'action': 'stay', 'value': 0}
 
 
 class Neighborhood(object):
@@ -134,7 +135,7 @@ class CellularAutomaton(object):
 
         self.applyFunc(func)
 
-        print("species counter: ", speciesCounter)  # console.log
+        #print("species counter: ", speciesCounter)  # console.log
 
     def registerActions(self):
         def func(cell):
@@ -164,7 +165,10 @@ class CellularAutomaton(object):
 
         # first resolve all but fighting
         def func(cell):
-            if cell.state['species'] == 'wall':
+            if cell.goal == 'resolved':
+                pass
+                #print("strange")
+            elif cell.state['species'] == 'wall':
                 self.resolveWall(cell)  # , theParameters['energy']['stay'])
             elif cell.state['species'] == 'empty':
                 self.resolveEmpty(cell)
@@ -248,12 +252,16 @@ class CellularAutomaton(object):
 
     def resolveBeingAttacked(self, cell):
         def func(targeting):
-            return targeting.goal['action'] == 'fight'
+            try:
+                return targeting.goal['action'] == 'fight'
+            except:
+                return False
 
         def isFought(cell):
             if len(cell.targetedBy) < 1:
                 return False
-            return np.vectorize(func)(np.array(cell.targetedBy)).any()
+            else:
+                return np.vectorize(func)(np.array(cell.targetedBy)).any()
             # return ramba.any(func, cell.targetedBy)  # TODO ramba
 
         if (self.isDestructible(cell) == False) & (isFought(cell)):

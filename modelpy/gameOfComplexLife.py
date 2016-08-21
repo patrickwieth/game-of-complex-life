@@ -12,7 +12,7 @@ def initEmpty():
 def initNeighborhood():
     world = {}
     space = []
-    size = {'x': 5, 'y': 5}
+    size = {'x': 10, 'y': 10}
 
     for i in range(size['x']):
         space.append([])
