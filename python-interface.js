@@ -2,30 +2,76 @@
  * Created by prawda on 21.08.2016.
  */
 
+exports.test = test;
+exports.create = function() {
+    return new PyInterface;
+};
 
 var PythonShell = require('python-shell');
+var R = require('ramda');
 
-var pyshell = new PythonShell('/modelpy/node-interface.py', {
-    mode: 'json',
-    pythonPath: 'python3'
-});
+const pythonPath = 'python'; // for linux use 'python3' - should be put in a config file
 
-var output = '';
-pyshell.stdout.on('data', function (data) {
-    console.log(data);
-    output += ''+data;
-});
+function PyInterface() {
+    this.shell = new PythonShell('/modelpy/node-interface.py', {
+        mode: 'json',
+        pythonPath: pythonPath
+    });
 
-pyshell.send({"command": "killAll"}).end(function (err) {
-    if (err) console.log(err);
-    console.log(output);
-});
+    this.send = function() {
+        this.shell.send({"command": "killAll"}).end(function (err) {
+            if (err) console.log(err);
+        });
+    };
 
-setTimeout(terminate, 1000);
+    this.end = function() {
+        this.shell.end(function (err) {
+            if (err) console.log(err);
+        });
+    };
 
-function terminate() {
-// end the input stream and allow the process to exit
-    pyshell.end(function (err) {
+    this.buffer = [];
+    var that = this;
+
+    this.printBuffer = function() {
+        console.log(that.buffer);
+    };
+
+    this.shell.on('message', function (message) {
+        // received a message sent from the Python script (a simple "print" statement)
+        that.buffer.push(message);
+    });
+
+}
+
+
+function test() {
+
+    console.log("bla");
+
+    var pyshell = new PythonShell('/modelpy/node-interface.py', {
+        mode: 'json',
+        pythonPath: pythonPath
+    });
+
+
+    pyshell.stdout.on('data', function (data) {
+        console.log(data);
+    });
+
+    pyshell.send({"command": "killAll"}).end(function (err) {
+        if (err) console.log(err);
+
+    });
+
+    setTimeout(R.partial(terminate, [pyshell]), 1000);
+
+
+}
+
+function terminate(shell) {
+    // end the input stream and allow the process to exit
+    shell.end(function (err) {
         if (err) throw err;
         console.log('finished');
     });
