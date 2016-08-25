@@ -290,3 +290,16 @@ class CellularAutomaton(object):
             addEnergy(cell)
 
         self.applyFunc(func)
+
+    def state_dict(self):
+        state = []
+
+        for x in range(len(self.world['space'])):
+            state.append([])
+
+            for y in range(len(self.world['space'][x])):
+                #print(self.world['space'][x][y].state)
+                state[x].append(self.world['space'][x][y].state)
+        
+
+        return {"state": state, "step": 0, "name": "test"}

@@ -2,26 +2,36 @@ import gameOfComplexLife as gocl
 import cellularAutomaton as ca
 import numpy as np
 
-import sys, json
-
+import sys, time, json
 
 
 # simple JSON echo script
-for line in sys.stdin:
-	received_data = json.loads(line)
+#for line in sys.stdin:
+#	received_data = json.loads(line)
 
-
-#print(received_data)
 
 def functions_to_call(argument):
 	switcher = {
 	"init": "test",
 	"killAll": "two",
 	"newSpecies": "three",
-	"setParameters": "zero", 
+	"setParameters": "zero",
 	"registerDecisions": "one"
 	}
 	return switcher.get(argument, "nothing")
+
+received_data = []
+
+
+while True:
+	for line in sys.stdin:
+		received_data.append( json.loads(line) )
+
+	#print(json.dumps({"result": functions_to_call(received_data['command'])}))
+	print('{"bla": "bla"}')
+
+	sys.stdout.flush()
+	time.sleep(1)
 
 try:
 	print(json.dumps({"result": functions_to_call(received_data['command'])}))

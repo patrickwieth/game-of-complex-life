@@ -8,15 +8,20 @@ var user = {
 user.should.have.property('name', 'tj');
 user.should.have.property('pets').with.lengthOf(4);
 
-var pyInterface = require('../python-interface.js');
+var pyInterface = require('../interface/python-interface.js');
 
 describe('engine', function() {
     describe('communication', function(){
         it('should talk to python', function(done){
+            // init a game
+            pyInterface.create("test");
+
+            // get the state
+
             var py = pyInterface.create();
 
-            py.send();
-            
+            var bla = py.send();
+            var blu = py.send();
 
             py.printBuffer();
             setTimeout(py.printBuffer, 500);
