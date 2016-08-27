@@ -59,12 +59,10 @@ var mooreNeighborhood = new cellularAutomaton.createNeighborhood(function () {
             space[i][j].neighbors.push(space[mod(i + j % 2, size.x)][mod(j - 1, size.y)]);
         }
     }
-
     world.space = space;
 
     // this is not in use, but should be!
     world.parameters = {
-
         energy: {
             stay: 1,
             move: 2,
@@ -127,7 +125,6 @@ exports.newSpecies = function (clientId, event) {
 
     gameOfLife.world.space[event.position.x][event.position.y].state = newCell.state;
     gameOfLife.world.space[event.position.x][event.position.y].futureState = newCell.futureState;
-
 };
 
 exports.setParameters = function (event) {

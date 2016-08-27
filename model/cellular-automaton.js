@@ -230,12 +230,6 @@ function CellularAutomaton(neighborhood) {
         else {
             cell.targetedBy = [];
             cell.futureState.energy = cell.state.energy - energyConsumed;
-
-            // death from exhaustion
-            if(cell.futureState.energy < 0) {
-                console.log("energy:", cell.futureState.energy);
-                cell.futureState = emptyState;
-            }
         }
     }
 
@@ -252,24 +246,10 @@ function CellularAutomaton(neighborhood) {
         if (cell.goal === 'resolved') {
             cell.futureState = cell.state;
             cell.futureState.energy = cell.state.energy - energyConsumed;
-
-
-            // death from exhaustion
-            if(cell.futureState.energy < 0) {
-                console.log("energy:", cell.futureState.energy);
-                cell.futureState = emptyState;
-            }
         }
         else
             cell.futureState = cell.state;
-            cell.futureState.energy = cell.state.energy - energyConsumed;
-
-
-            // death from exhaustion
-            if(cell.futureState.energy < 0) {
-                console.log("energy:", cell.futureState.energy);
-                cell.futureState = emptyState;
-            }
+            //cell.futureState.energy = cell.state.energy - energyConsumed;
     }
 
     function resolveFight(cell, energyConsumed) {
@@ -301,6 +281,11 @@ function CellularAutomaton(neighborhood) {
             }
             if(theParameters.energy.fromSun && true /* sunShines() */) {
                 cell.state.energy += theParameters.energy.fromSun;
+            }
+
+            // death from exhaustion
+            if(cell.futureState.energy < 0) {
+                cell.futureState = emptyState;
             }
         }
 
