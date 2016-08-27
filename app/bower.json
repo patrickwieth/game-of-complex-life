@@ -1,0 +1,21 @@
+{
+  "name": "game-of-life",
+  "version": "0.0.0",
+  "homepage": "https://github.com/shitzensreal/game-of-complex-life",
+  "authors": [
+    "Patrick Wieth <patrick.wieth@googlemail.com>"
+  ],
+  "license": "MIT",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "lib",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "ace": "~1.2.3",
+    "ace-builds": "~1.2.3"
+  }
+}
