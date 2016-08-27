@@ -19,12 +19,16 @@ exports.create = function(name) {
 var PythonShell = require('python-shell');
 var R = require('ramda');
 
-const pythonPath = 'python'; // for linux use 'python3' - should be put in a config file
+console.log(process.platform);
+const pythonPath = {
+    linux: 'python3',
+    win32: 'python'
+};
 
 function PyInterface() {
     this.shell = new PythonShell('/modelpy/node-interface.py', {
         mode: 'json',
-        pythonPath: pythonPath
+        pythonPath: pythonPath[process.platform]
     });
 
     this.send = function() {

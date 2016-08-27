@@ -4,7 +4,7 @@ emptyState = {'color': 'white', 'species': 'empty', 'energy': 0}
 deadState = {'color': 'black', 'species': 'empty', 'energy': 1}
 
 """
- erlaubte actions f�r eine Zelle:
+ erlaubte actions fuer eine Zelle:
  {
  action: "move",
  value: 0 / 1 ... / 5 (neighbor index)
@@ -65,7 +65,7 @@ class CellularAutomaton(object):
             if isinstance(level, list):
                 for l in level:
                     recursion(l)
-            elif str(type(level)) == "<class 'cellularAutomaton.Cell'>":  # TODO unschön
+            elif str(type(level)) == "<class 'cellularAutomaton.Cell'>":  # TODO unschoen
                 f(level)
             else:
                 print('elemental cell should be an object, but is:' + str(type(level)))
