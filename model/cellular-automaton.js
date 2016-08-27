@@ -68,7 +68,7 @@ function Neighborhood(createSpace) {
 
 // Constructor for Cellular Automaton
 function CellularAutomaton(neighborhood) {
-
+    var that = this;
     this.decisions = {};
 
     this.applyFunc = function (f) {
@@ -149,7 +149,7 @@ function CellularAutomaton(neighborhood) {
     };
 
     function registerTarget(cell) {
-        if (cell.goal.value >= 0 && cell.goal.value < cell.neighbors.length) {
+        if (cell.goal.value >= 0 && cell.goal.value < cell.neighbors.length && cell.state.energy >= that.world.parameters.energy[cell.goal.action]) {
             cell.neighbors[cell.goal.value].targetedBy.push(cell);
         }
         else cell.goal.action = "stay";
@@ -233,6 +233,7 @@ function CellularAutomaton(neighborhood) {
 
             // death from exhaustion
             if(cell.futureState.energy < 0) {
+                console.log("energy:", cell.futureState.energy);
                 cell.futureState = emptyState;
             }
         }
@@ -251,10 +252,24 @@ function CellularAutomaton(neighborhood) {
         if (cell.goal === 'resolved') {
             cell.futureState = cell.state;
             cell.futureState.energy = cell.state.energy - energyConsumed;
+
+
+            // death from exhaustion
+            if(cell.futureState.energy < 0) {
+                console.log("energy:", cell.futureState.energy);
+                cell.futureState = emptyState;
+            }
         }
         else
             cell.futureState = cell.state;
             cell.futureState.energy = cell.state.energy - energyConsumed;
+
+
+            // death from exhaustion
+            if(cell.futureState.energy < 0) {
+                console.log("energy:", cell.futureState.energy);
+                cell.futureState = emptyState;
+            }
     }
 
     function resolveFight(cell, energyConsumed) {
