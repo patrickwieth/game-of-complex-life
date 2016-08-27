@@ -110,9 +110,7 @@ app.get('/', function(req, res){
 var gameOfLife = require('./model/game-of-complex-life.js');
 
 // updates of game come here:
-
 var timePerFrame = 200;
-
 
 var updates = function() {
 

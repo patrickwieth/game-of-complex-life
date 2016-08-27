@@ -5,12 +5,6 @@
 var mongo = require('./mongo.js');
 
 
-mongo.connect()
-    .then(mongo.getData)
-    .then(function(result) {
-        result;
-    });
-
 exports.test = test;
 exports.create = function(name) {
     return new PyInterface(name);
@@ -26,6 +20,11 @@ const pythonPath = {
 };
 
 function PyInterface() {
+    this.readStateFromMongo = function() {
+        return mongo.connect()
+            .then(mongo.getData);
+    };
+
     this.shell = new PythonShell('/modelpy/node-interface.py', {
         mode: 'json',
         pythonPath: pythonPath[process.platform]

@@ -101,6 +101,10 @@ exports.getState = function () {
     return gameOfLife.world.space;
 };
 
+exports.setState = function (state) {
+    gameOfLife.world.space = state;
+};
+
 exports.killAll = function (species) {
     gameOfLife.applyFunc(function (cell) {
         if(cell.state.species == species) cell.kill();

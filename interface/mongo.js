@@ -29,7 +29,7 @@ exports.getData = function(db) {
 
             //console.log("Found the following records");
             //console.dir(docs);
-            resolve(docs);
+            resolve(docs[0].state);
         });
     });
 };

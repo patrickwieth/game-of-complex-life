@@ -9,9 +9,20 @@ user.should.have.property('name', 'tj');
 user.should.have.property('pets').with.lengthOf(4);
 
 var pyInterface = require('../interface/python-interface.js');
+var gameOfLife = require('../model/game-of-complex-life.js');
 
 describe('engine', function() {
-    describe('communication', function(){
+    describe('interface', function() {
+        it('should read a state from mongodb and save to gameOfLife object', function() {
+            var interface = pyInterface.create();
+            interface.readStateFromMongo()
+                .then(function(state) {
+
+                    gameOfLife.setState(state);
+                });
+
+        });
+
         it('should talk to python', function(done){
             // init a game
             pyInterface.create("test");
