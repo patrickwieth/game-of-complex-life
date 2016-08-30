@@ -32,8 +32,10 @@ class CellularAutomaton(object):
         self.setParameters(param)
         self.decisions = {}
         self.species = self.findSpecies()
+        self.turn = 0
 
     def evolve(self):
+        self.turn += 1
         self.species = self.findSpecies()  # build list of all living species
         self.cells[:, 3] = self.cells[:, 3].astype(np.float32)  # not sure where they turn into strings
         self.cells[:, 4] = 'stay'  # reset goals
