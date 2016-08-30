@@ -4,6 +4,7 @@ from neat import nn, population, statistics, activation_functions
 import cellularAutomaton as ca
 import numpy as np
 
+
 # GUIDE
 # initilize game object with some initialState, e.g. cellularAutomaton.initializeHexagonal(), and some parameters, e.g. cellularAutomaton.defaultParameters
 # add your species with game.setNewSpecies(index, name, color, energy), only index and name are really needed
@@ -20,7 +21,7 @@ def makeDecision(state, spec):
     N = np.sum(mask)
     if N < 1:
         return np.array([])
-    dec = np.empty((N, 2),dtype=object)
+    dec = np.empty((N, 2), dtype=object)
     dec[:, 0] = 'stay'
     dec[:, 1] = 0
     cells = state['cells'][mask]
@@ -28,21 +29,22 @@ def makeDecision(state, spec):
     secondneighbors = state['cells'][np.int_(state['secondneighbors'][mask])]
 
     if spec == 'Move':
-        dec[:,0] = 'move'
-        dec[:,1] = np.random.randint(0,len(neighbors[0]),N)
+        dec[:, 0] = 'move'
+        dec[:, 1] = np.random.randint(0, len(neighbors[0]), N)
 
     if spec == 'Clone':
-        dec[:,0] = 'clone'
-        dec[:,1] = np.random.randint(0,len(neighbors[0]),N)
+        dec[:, 0] = 'clone'
+        dec[:, 1] = np.random.randint(0, len(neighbors[0]), N)
 
     return dec
+
 
 def netDecision(state, spec, net):
     mask = state['cells'][:, 1] == spec
     N = np.sum(mask)
     if N < 1:
         return np.array([])
-    dec = np.empty((N, 2),dtype=object)
+    dec = np.empty((N, 2), dtype=object)
     dec[:, 0] = 'stay'
     dec[:, 1] = 0
     cells = state['cells'][mask]
@@ -50,31 +52,27 @@ def netDecision(state, spec, net):
     secondneighbors = state['cells'][np.int_(state['secondneighbors'][mask])]
     # input will be self.energy, all 6 neighbors as -1,0,1 enemy,empty,friendly, 7 total, 19 if secondneighbors
     neighborvalues = np.zeros(np.shape(neighbors)[:2])
-    neighborvalues[(neighbors[:,:,1] != spec) & (neighbors[:,:,1] != 'empty')] = -1
-    neighborvalues[neighbors[:,:,1] == spec] = 1
+    neighborvalues[(neighbors[:, :, 1] != spec) & (neighbors[:, :, 1] != 'empty')] = -1
+    neighborvalues[neighbors[:, :, 1] == spec] = 1
     print(neighborvalues)
 
-    inputs = np.zeros((N,7))
-    inputs[:,0] = cells[:,3]
-    inputs[:,1:7] = neighborvalues
+    inputs = np.zeros((N, 7))
+    inputs[:, 0] = cells[:, 3]
+    inputs[:, 1:7] = neighborvalues
     print(inputs)
-    input.append(cell.state['energy'])
-    for n in cell.neighbors:
-        if n.state['species'] == 'empty':
-            input.append(0)
-        elif (n.state['species'] != cell.state['species']) & (n.state['species'] != 'empty'):
-            input.append(-1)
-        elif n.state['species'] == cell.state['species']:
-            input.append(1)
-        else:
-            print("something wrong with neighbors")
-    #output will be -1-1, stay,clone 1-6, move 1-6, fight 1-6
-    output = net.activate(input)
-    #print(len(input),len(output))
-    choice = np.argmax(output)
+    # output will be -1-1, stay,clone 1-6, move 1-6, fight 1-6
+    outputs = np.zeros((N,19))
+    for i in range(N):
+        outputs[i] = net.activate(inputs[i])
+    # print(len(input),len(output))
+    choices = np.argmax(outputs,axis=1)
+    print(outputs)
+    print(choices)
+    choices[choices == 0] = ['stay',0]
+    print(choices)
     if choice == 0:
         return {'action': 'stay', 'value': 0}
-    choice = choice -1
+    choice = choice - 1
     if choice < 6:
         return {'action': 'clone', 'value': choice}
     choice = choice - 6
@@ -86,12 +84,14 @@ def netDecision(state, spec, net):
     print("something wrong with output")
     return {'action': 'stay', 'value': 0}
 
-def countSpecies(state,spec):
-    return np.sum(state['cells'][:,1] == spec)
 
-#this is a fitness function for trainig single genomes alone
+def countSpecies(state, spec):
+    return np.sum(state['cells'][:, 1] == spec)
+
+
+# this is a fitness function for trainig single genomes alone
 def eval_fitness_single(genomes):
-    #multiple fights make for better statistics
+    # multiple fights make for better statistics
     num_runs = 1
     for g in genomes:
         net = nn.create_recurrent_phenotype(g)
@@ -106,57 +106,64 @@ def eval_fitness_single(genomes):
             c = 0
             while c < 20:
                 dec = {}
-                recursionDecision(gameOfLife.world['space'],dec,currentDecision)
+                recursionDecision(gameOfLife.world['space'], dec, currentDecision)
                 gameOfLife.decisions = dec
                 evolve()
                 c += 1
-            achi += countSpecies(gameOfLife.world['space'],'test')
+            achi += countSpecies(gameOfLife.world['space'], 'test')
         g.fitness = achi / num_runs
 
-#this is a fitness function for training genomes by letting them play on a common field
+
+# this is a fitness function for training genomes by letting them play on a common field
 def eval_fitness_internalfight(allgenomes):
     num_runs = 2
     for g in allgenomes:
         g.fitness = 0
-    #sadly, the number of genomes from neat-python is not fixed, so we only train some to fit %4
-    genomes = allgenomes[:int(len(allgenomes)/4)*4]
-    print(len(allgenomes),len(genomes))
+    # sadly, the number of genomes from neat-python is not fixed, so we only train some to fit %4
+    genomes = allgenomes[:int(len(allgenomes) / 4) * 4]
+    print(len(allgenomes), len(genomes))
     for _ in range(num_runs):
-        #geht nur, wenn genomes durch 4 teilbar ist
-        grouping = np.reshape(np.random.permutation(len(genomes)),(len(genomes)/4,4))
+        # geht nur, wenn genomes durch 4 teilbar ist
+        grouping = np.reshape(np.random.permutation(len(genomes)), (len(genomes) / 4, 4))
         for group in grouping:
             nets = []
-            game = ca.CellularAutomaton(initialState=ca.initializeHexagonal(10,10),param=ca.defaultParameters)
-            for i,g in enumerate(group):
+            game = ca.CellularAutomaton(initialState=ca.initializeHexagonal(10, 10), param=ca.defaultParameters)
+            for i, g in enumerate(group):
                 nets.append(nn.create_recurrent_phenotype(genomes[g]))
-                game.setNewSpecies(i*25, i, 0)
+                game.setNewSpecies(i * 25, str(i), 0)
             while game.turn < 30:
-                for i,g in enumerate(group):
+                for i, g in enumerate(group):
+                    game.setDecisions(str(i), netDecision(game.getState(), str(i), nets[i]))
+                    exit()
                     try:
-                        game.setDecisions(netDecision(game.getState(),i,net[i]))
+                        game.setDecisions(str(i), netDecision(game.getState(), str(i), nets[i]))
                     except:
                         pass
                 game.evolve()
-            for i,g in enumerate(group):
-                genomes[g].fitness += countSpecies(game.getState(),i)
-    #results of fights define the fitness
+            for i, g in enumerate(group):
+                genomes[g].fitness += countSpecies(game.getState(), i)
+    # results of fights define the fitness
     for g in genomes:
         g.fitness = g.fitness / num_runs
 
-#adding elu to activation functions
+
+# adding elu to activation functions
 def elu(x):
-    return x if x < 0 else np.exp(x)-1
+    return x if x < 0 else np.exp(x) - 1
+
+
 activation_functions.add('elu', elu)
+
 
 def main():
     print("Starting...")
     pop = population.Population(os.path.join(os.path.dirname(__file__), 'nn_config'))
-    #HINT change checkpoints for new try or reloading
+    # HINT change checkpoints for new try or reloading
     try:
         pop.load_checkpoint(os.path.join(os.path.dirname(__file__), 'checkpoints/popv1.cpt'))
     except:
         pass
-    pop.run(eval_fitness_internalfight, 5)
+    pop.run(eval_fitness_internalfight, 100)
     pop.save_checkpoint(os.path.join(os.path.dirname(__file__), 'checkpoints/popv1.cpt'))
 
     statistics.save_stats(pop.statistics)
@@ -167,13 +174,14 @@ def main():
     print('\nBest genome:\n{!s}'.format(winner))
     print('\nOutput:')
     winner_net = nn.create_recurrent_phenotype(winner)
-    game = ca.CellularAutomaton(initialState=ca.initializeHexagonal(10,10),param=ca.defaultParameters)
+    game = ca.CellularAutomaton(initialState=ca.initializeHexagonal(10, 10), param=ca.defaultParameters)
     game.setNewSpecies(0, 'winner', 0)
     while game.turn < 30:
-        game.setDecisions(netDecision(state,i,net[i]))
-        evolve()
-    print("Ended with: ",countSpecies(game.getState(),'winner'))
-    print(game.cells[game.cells[:,1] != 'empty',:4])
+        game.setDecisions('winner', netDecision(game.getState(), 'winner', winner_net))
+        game.evolve()
+    print("Ended with: ", countSpecies(game.getState(), 'winner'))
+    print(game.cells[game.cells[:, 1] != 'empty', :4])
+
 
 if __name__ == "__main__":
     main()
