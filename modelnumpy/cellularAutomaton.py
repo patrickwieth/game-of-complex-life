@@ -32,6 +32,7 @@ class CellularAutomaton(object):
         self.setParameters(param)
         self.decisions = {}
         self.species = self.findSpecies()
+        self.step = 0
 
     def evolve(self):
         self.species = self.findSpecies()  # build list of all living species
@@ -45,6 +46,7 @@ class CellularAutomaton(object):
         self.registerActions()
         self.resolveActions()
         self.updateCells()
+        self.step += 1
         # uncomment this to not retain decisions
         self.decisions = {}
 
@@ -162,9 +164,10 @@ class CellularAutomaton(object):
     def getState(self):
         return {'cells': np.copy(self.cells), 'neighbors': np.copy(self.neighbors),
                 'secondneighbors': np.copy(self.secondneighbors), 'futureStates': np.copy(self.futureStates),
-                'shape': np.copy(self.shape)}
+                'shape': np.copy(self.shape), 'step': self.step}
 
     def setState(self, state):
+        self.step = np.copy(state['step'])
         self.cells = np.copy(state['cells'])
         self.neighbors = np.copy(state['neighbors'])
         self.secondneighbors = np.copy(state['secondneighbors'])
@@ -172,12 +175,14 @@ class CellularAutomaton(object):
         self.shape = np.copy(state['shape'])
         self.targetedBy = np.int_(np.zeros((len(self.cells), 6)))
 
-    def setDecisions(self, spec, dec):
-        self.decisions[spec] = np.copy(dec)
+    def setDecisions(self, species, decisions):
+        self.decisions[species] = np.copy(decisions)
 
 
 defaultParameters = {
-    'energy': {'stay': 1, 'move': 2, 'fight': 4, 'clone': 10, 'wall': 1, 'fromEmptyCells': 1, 'fromSun': 0}}
+    'energy': {'stay': 1, 'move': 2, 'fight': 4, 'clone': 10, 'wall': 1, 'fromEmptyCells': 1, 'fromSun': 0},
+    'size' : {'x': 5, 'y': 5} 
+    }
 
 
 def initializeHexagonal(x=10, y=10):
@@ -223,4 +228,4 @@ def initializeHexagonal(x=10, y=10):
     secondneighbors = np.int_(secondneighbors)
 
     return {'cells': cells, 'neighbors': neighbors, 'secondneighbors': secondneighbors, 'futureStates': futureStates,
-            'shape': np.shape(temp)}
+            'shape': np.shape(temp), 'step': 0}
