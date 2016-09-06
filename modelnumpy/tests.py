@@ -83,14 +83,11 @@ class TestStringMethods(unittest.TestCase):
         self.assertTrue(np.all(self.state['cells'] == self.game.getState()['cells']))
 
     def test_evade(self):
-        print('########################')
+        #print('########################')
         self.game.setNewSpecies(1, 'tokill', 'red', 10)
         self.state = self.game.getState()
         self.game.setDecisions('Move',[['fight',3]])
         self.game.setDecisions('tokill',[['move',3]])
-        print(self.game.decisions)
-        self.game.registerGoals()
-        print(self.game.getState()['cells'][:,4:6])
         self.game.evolve()
         self.state['cells'][1,1] = 'empty'
         self.state['cells'][1,2] = 'white'
@@ -99,10 +96,43 @@ class TestStringMethods(unittest.TestCase):
         self.state['cells'][5,2] = 'red'
         self.state['cells'][5,3] = 13
         self.state['cells'][0,3] = 22
+        #print(self.game.getState()['cells'])
+        #print(self.state['cells'])
+        #print('########################')
+        self.assertTrue(np.all(self.state['cells'] == self.game.getState()['cells']))
+
+    def test_contested(self):
+        print('########################')
+        self.game.setNewSpecies(5, 'toMove', 'red', 20)
+        self.state = self.game.getState()
+        self.state2 = self.game.getState()
+        self.game.setDecisions('Move',[['move',3]])
+        self.game.setDecisions('toMove',[['move',4]])
+        self.game.evolve()
+        self.state['cells'][0,1] = 'empty'
+        self.state['cells'][0,2] = 'white'
+        self.state['cells'][0,3] = 0
+        self.state['cells'][1,1] = 'Move'
+        self.state['cells'][1,2] = 'blue'
+        self.state['cells'][1,3] = 23
+        self.state['cells'][5,1] = 'toMove'
+        self.state['cells'][5,2] = 'red'
+        self.state['cells'][5,3] = 23
+
+        self.state2['cells'][0,1] = 'Move'
+        self.state2['cells'][0,2] = 'blue'
+        self.state2['cells'][0,3] = 23
+        self.state2['cells'][1,1] = 'toMove'
+        self.state2['cells'][1,2] = 'red'
+        self.state2['cells'][1,3] = 23
+        self.state2['cells'][5,1] = 'empty'
+        self.state2['cells'][5,2] = 'white'
+        self.state2['cells'][5,3] = 0
         print(self.game.getState()['cells'])
         print(self.state['cells'])
+        print(self.state2['cells'])
         print('########################')
-        self.assertTrue(np.all(self.state['cells'] == self.game.getState()['cells']))
+        self.assertTrue((np.all(self.state['cells'] == self.game.getState()['cells'])) | (np.all(self.state2['cells'] == self.game.getState()['cells'])))
 
 
 if __name__ == '__main__':

@@ -53,7 +53,6 @@ class CellularAutomaton(object):
 
     def registerActions(self):
         targets = self.neighbors[np.arange(len(self.cells)), np.int_(self.cells[:, 5])]
-        print(self.cells[(self.cells[:, 4] == 'fight')])
         # first filter actions for those with enough energy, everyone else 'stays'
         self.cells[(self.cells[:, 4] == 'move') & (self.cells[:, 3] < self.parameters['energy']['move']), 4] = 'stay'
         self.cells[(self.cells[:, 4] == 'clone') & (self.cells[:, 3] < self.parameters['energy']['clone']), 4] = 'stay'
@@ -66,27 +65,20 @@ class CellularAutomaton(object):
         self.cells[(self.cells[:, 4] == 'fight'), 3] -= self.parameters['energy']['fight']
 
         # if the target is invalid, cancel their move. energy is still lost
+        self.cells[self.cells[targets, 1] == 'wall', 4] = 'stay'
         self.cells[(self.cells[:, 4] == 'move') & (self.cells[targets, 1] != 'empty'), 4] = 'stay'
         self.cells[(self.cells[:, 4] == 'clone') & (self.cells[targets, 1] != 'empty'), 4] = 'stay'
-        print(self.cells[(self.cells[:, 4] == 'fight')])
         self.cells[(self.cells[:, 4] == 'fight') & (
             (self.cells[targets, 1] == 'empty') | (self.cells[targets, 1] == 'wall')), 4] = 'stay'
-        print(self.cells[(self.cells[:, 4] == 'fight')])
 
-        # update targetedBy array with move and clone targets, only for empty cells
-        self.targetedBy[:, :] = 0
-        temp = self.cells[:, 4][self.neighbors]
-        self.targetedBy[(temp == 'move') | (temp == 'clone')] = 1
-
-        # this could certainly be done faster, but for now i want it to work
-        for i, l in enumerate(self.targetedBy):
-            if np.sum(self.targetedBy[i]) > 1:
-                temp = np.random.choice(np.arange(len(l))[l == 1])
-                self.targetedBy[i, :] = 0
-                self.targetedBy[i, temp] = 1
-
-        # walls cant be targeted
-        self.targetedBy[self.cells[:, 1] == 'wall', :] = 0
+        # randomly reduce duplicate targets
+        mask = np.arange(len(self.cells))[(self.cells[:, 4] == 'move') | (self.cells[:, 4] == 'clone')]
+        for i in np.arange(len(self.cells)):
+            while np.sum(targets[mask] == i) > 1:
+                indi = mask[targets[mask] == i]
+                rem = np.random.choice(indi, 1)
+                self.cells[rem, 4] = 'stay'
+                mask = np.arange(len(self.cells))[(self.cells[:, 4] == 'move') | (self.cells[:, 4] == 'clone')]
 
     def resolveActions(self):
         targets = self.neighbors[np.arange(len(self.cells)), np.int_(self.cells[:, 5])]
@@ -107,9 +99,11 @@ class CellularAutomaton(object):
         self.futureStates[targets[mask]] = np.copy(self.cells[mask, 1:4])
 
         # fights make cells empty
-        mask = (self.cells[:, 4] == 'fight')  # cells that stay
+        mask = (self.cells[:, 4] == 'fight')
+        self.futureStates[mask] = np.copy(self.cells[mask, 1:4])    # cells that stay
+        mask = mask & (self.futureStates[targets][:,0] != 'empty') & (self.futureStates[targets][:,0] != 'wall')
         self.futureStates[targets[mask]] = ['empty', 'black', 0.0]
-        self.futureStates[mask] = np.copy(self.cells[mask, 1:4])
+
 
         # cells without energy will die here before they get energy, if your species is too active it's bad
         mask = ((self.cells[:, 1] != 'empty') & (self.cells[:, 3] <= 0))
@@ -149,16 +143,16 @@ class CellularAutomaton(object):
                     decisionsForThisSpecies = self.decisions[s]
                     l = int(min(np.sum(self.cells[:, 1] == s), len(decisionsForThisSpecies)))
                     self.cells[(self.cells[:, 1] == s), 4] = np.copy(decisionsForThisSpecies[:, 0])  # all actions set
-                    self.cells[(self.cells[:, 1] == s), 5] = np.copy(decisionsForThisSpecies[:, 1])  # all targets set
+                    self.cells[(self.cells[:, 1] == s), 5] = np.int_(np.copy(decisionsForThisSpecies[:, 1]))  # all targets set
                 except:
-                    print('problem with decisions of ', s)
+                    #print('problem with decisions of ', s)
                     pass
         #TODO maybe make some verbosity stuff to print this, so it does not spam when training
         #print("species counter: ", speciesCounter)
 
     # =========Interface=================
 
-    def setNewSpecies(self, i, spec, color='green', eng=0):
+    def setNewSpecies(self, i, spec, color='green', eng=2):
         self.cells[i, 1] = spec
         self.cells[i, 2] = color
         self.cells[i, 3] = eng
