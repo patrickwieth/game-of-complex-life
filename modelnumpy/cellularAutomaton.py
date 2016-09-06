@@ -44,15 +44,16 @@ class CellularAutomaton(object):
 
         self.registerGoals()
         self.registerActions()
+        self.futureStates = np.copy(self.cells[:, 1:4]) #copy current states for future states since energy was paid
         self.resolveActions()
         self.updateCells()
         self.step += 1
-        # uncomment this to not retain decisions
+        # uncomment this to retain decisions
         self.decisions = {}
 
     def registerActions(self):
         targets = self.neighbors[np.arange(len(self.cells)), np.int_(self.cells[:, 5])]
-
+        print(self.cells[(self.cells[:, 4] == 'fight')])
         # first filter actions for those with enough energy, everyone else 'stays'
         self.cells[(self.cells[:, 4] == 'move') & (self.cells[:, 3] < self.parameters['energy']['move']), 4] = 'stay'
         self.cells[(self.cells[:, 4] == 'clone') & (self.cells[:, 3] < self.parameters['energy']['clone']), 4] = 'stay'
@@ -67,8 +68,10 @@ class CellularAutomaton(object):
         # if the target is invalid, cancel their move. energy is still lost
         self.cells[(self.cells[:, 4] == 'move') & (self.cells[targets, 1] != 'empty'), 4] = 'stay'
         self.cells[(self.cells[:, 4] == 'clone') & (self.cells[targets, 1] != 'empty'), 4] = 'stay'
+        print(self.cells[(self.cells[:, 4] == 'fight')])
         self.cells[(self.cells[:, 4] == 'fight') & (
-            (self.cells[targets, 1] != 'empty') & (self.cells[targets, 1] != 'empty')), 4] = 'stay'
+            (self.cells[targets, 1] == 'empty') | (self.cells[targets, 1] == 'wall')), 4] = 'stay'
+        print(self.cells[(self.cells[:, 4] == 'fight')])
 
         # update targetedBy array with move and clone targets, only for empty cells
         self.targetedBy[:, :] = 0
@@ -88,8 +91,6 @@ class CellularAutomaton(object):
     def resolveActions(self):
         targets = self.neighbors[np.arange(len(self.cells)), np.int_(self.cells[:, 5])]
 
-        emptyState = np.array(['empty', 'white', 0])
-        deadState = np.array(['empty', 'black', 0])
         # first resolve all but fighting
         # walls cant be targeted and walls with 0 or less energy become empty
         mask = (self.cells[:, 1] == 'wall') & (self.cells[:, 3] <= 0)
@@ -108,6 +109,7 @@ class CellularAutomaton(object):
         # fights make cells empty
         mask = (self.cells[:, 4] == 'fight')  # cells that stay
         self.futureStates[targets[mask]] = ['empty', 'black', 0.0]
+        self.futureStates[mask] = np.copy(self.cells[mask, 1:4])
 
         # cells without energy will die here before they get energy, if your species is too active it's bad
         mask = ((self.cells[:, 1] != 'empty') & (self.cells[:, 3] <= 0))
@@ -127,32 +129,41 @@ class CellularAutomaton(object):
                             self.parameters['energy']['fromSun']
         # hmm, just setting empty and walls cells to 0 energy, bc why not
         self.cells[self.cells[:, 1] == 'empty', 3] = 0.0
+        # this resets the goals, not necessary but easier to make tests for
+        self.cells[:, 4] = 'stay'
+        self.cells[:, 5] = 0
         self.cells[self.cells[:, 1] == 'wall', 3] = 0.0
 
     def findSpecies(self):
         return np.unique(self.cells[:, 1])
 
+    # TODO non standard goals can be used to avoid energy loss so fix that
     def registerGoals(self):
         # decisions sind [action, value]
         speciesCounter = {}
         for s in self.species:
             if (s != 'empty') & (s != 'wall'):  # wall and empty 'stay' anyway
                 speciesCounter[s] = np.sum(self.cells[:, 1] == s)
-                # if someone messed up his decisions and the are longer or shorter than the count of his species we dont want errors, his problem
+                # if someone messed up his decisions and they are longer or shorter than the count of his species we dont want errors, his problem
                 try:
                     decisionsForThisSpecies = self.decisions[s]
                     l = int(min(np.sum(self.cells[:, 1] == s), len(decisionsForThisSpecies)))
                     self.cells[(self.cells[:, 1] == s), 4] = np.copy(decisionsForThisSpecies[:, 0])  # all actions set
                     self.cells[(self.cells[:, 1] == s), 5] = np.copy(decisionsForThisSpecies[:, 1])  # all targets set
                 except:
+                    print('problem with decisions of ', s)
                     pass
-
-        print("species counter: ", speciesCounter)
+        #TODO maybe make some verbosity stuff to print this, so it does not spam when training
+        #print("species counter: ", speciesCounter)
 
     # =========Interface=================
 
     def setNewSpecies(self, i, spec, color='green', eng=0):
-        self.cells[i, 1:6] = np.array([spec, color, eng, 'stay', 0])
+        self.cells[i, 1] = spec
+        self.cells[i, 2] = color
+        self.cells[i, 3] = eng
+        self.cells[i, 4] = 'stay'
+        self.cells[i, 5] = 0
         self.futureStates[i] = np.copy(self.cells[i, 1:4])
 
     def killSpecies(self, spec):
@@ -202,16 +213,18 @@ def initializeHexagonal(x=10, y=10):
 
     futureStates = np.copy(cells[:, 1:4])
 
-    temp = np.reshape(np.arange(x * y), (x, y))
+    temp = np.arange(x * y)
     neighbors = np.zeros((x * y, 6))
-    neighbors[:, 0] = np.copy(np.roll(np.roll(temp, 0, axis=0), 1, axis=1).flatten())
-    neighbors[:, 1] = np.copy(np.roll(np.roll(temp, 1, axis=0), 1, axis=1).flatten())
-    neighbors[:, 2] = np.copy(np.roll(np.roll(temp, 1, axis=0), 0, axis=1).flatten())
-    neighbors[:, 3] = np.copy(np.roll(np.roll(temp, 0, axis=0), -1, axis=1).flatten())
-    neighbors[:, 4] = np.copy(np.roll(np.roll(temp, -1, axis=0), 0, axis=1).flatten())
-    neighbors[:, 5] = np.copy(np.roll(np.roll(temp, -1, axis=0), 1, axis=1).flatten())
+    neighbors[:, 0] = (np.int_(temp / y) + 1) % x * y + temp % y
+    neighbors[:, 1] = (np.int_(temp / y) - 1) % x * y + temp % y
+    neighbors[:, 2] = ((np.int_(temp / y) + temp % y % 2 - 1 ) % x) * y + (temp % y + 1) % y
+    neighbors[:, 3] = ((np.int_(temp / y) + temp % y % 2  ) % x) * y + (temp % y + 1) % y
+    neighbors[:, 4] = ((np.int_(temp / y) + temp % y % 2 - 1 ) % x) * y + (temp % y - 1) % y
+    neighbors[:, 5] = ((np.int_(temp / y) + temp % y % 2  ) % x) * y + (temp % y - 1) % y
     neighbors = np.int_(neighbors)
 
+    temp = np.reshape(np.arange(x * y), (x,y))
+    #TODO fix second neighbors
     secondneighbors = np.zeros((x * y, 12))
     secondneighbors[:, 0] = np.copy(np.roll(np.roll(temp, 1, axis=1), 1, axis=1).flatten())
     secondneighbors[:, 1] = np.copy(np.roll(np.roll(temp, 1, axis=0), 2, axis=1).flatten())
