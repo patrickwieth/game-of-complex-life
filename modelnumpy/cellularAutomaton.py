@@ -57,19 +57,26 @@ class CellularAutomaton(object):
         self.cells[(self.cells[:, 4] == 'move') & (self.cells[:, 3] < self.parameters['energy']['move']), 4] = 'stay'
         self.cells[(self.cells[:, 4] == 'clone') & (self.cells[:, 3] < self.parameters['energy']['clone']), 4] = 'stay'
         self.cells[(self.cells[:, 4] == 'fight') & (self.cells[:, 3] < self.parameters['energy']['fight']), 4] = 'stay'
+        self.cells[(self.cells[:, 4] == 'wall') & (self.cells[:, 3] < self.parameters['energy']['wall']), 4] = 'stay'
+        self.cells[(self.cells[:, 4] == 'infuse') & (self.cells[:, 3] < self.parameters['energy']['infuse'][0]), 4] = 'stay'
 
         # take away their energy
         self.cells[(self.cells[:, 4] == 'stay'), 3] -= self.parameters['energy']['stay']
         self.cells[(self.cells[:, 4] == 'move'), 3] -= self.parameters['energy']['move']
         self.cells[(self.cells[:, 4] == 'clone'), 3] -= self.parameters['energy']['clone']
         self.cells[(self.cells[:, 4] == 'fight'), 3] -= self.parameters['energy']['fight']
+        self.cells[(self.cells[:, 4] == 'wall'), 3] -= self.parameters['energy']['wall']
+        self.cells[(self.cells[:, 4] == 'infuse'), 3] -= self.parameters['energy']['infuse'][0]
 
         # if the target is invalid, cancel their move. energy is still lost
-        self.cells[self.cells[targets, 1] == 'wall', 4] = 'stay'
+        # turning into a wall will be faster than fighting but slower than infusing
+        self.cells[(self.cells[targets, 1] == 'wall') | (self.cells[targets, 4] == 'wall'), 4] = 'stay'
         self.cells[(self.cells[:, 4] == 'move') & (self.cells[targets, 1] != 'empty'), 4] = 'stay'
         self.cells[(self.cells[:, 4] == 'clone') & (self.cells[targets, 1] != 'empty'), 4] = 'stay'
         self.cells[(self.cells[:, 4] == 'fight') & (
             (self.cells[targets, 1] == 'empty') | (self.cells[targets, 1] == 'wall')), 4] = 'stay'
+        #this currently allows infusing walls
+        self.cells[(self.cells[:, 4] == 'infuse') & (self.cells[targets, 1] == 'empty'), 4] = 'stay'
 
         # randomly reduce duplicate targets
         mask = np.arange(len(self.cells))[(self.cells[:, 4] == 'move') | (self.cells[:, 4] == 'clone')]
@@ -83,10 +90,16 @@ class CellularAutomaton(object):
     def resolveActions(self):
         targets = self.neighbors[np.arange(len(self.cells)), np.int_(self.cells[:, 5])]
 
+        # infusing increases energy of a cells currently before they act or are acted upon, could only target nonempty cells anyway
+        mask = self.cells[:, 4] == 'infuse'
+        self.cells[targets[mask], 3] += self.parameters['energy']['infuse'][1]
+
         # first resolve all but fighting
-        # walls cant be targeted and walls with 0 or less energy become empty
-        mask = (self.cells[:, 1] == 'wall') & (self.cells[:, 3] <= 0)
-        self.futureStates[mask] = ['empty', 'white', 0.0]
+        # wall cells are grey for now, take over their energy
+        mask = self.cells[:, 4] == 'wall'
+        self.futureStates[mask, :2] = ['wall', 'grey']
+        self.futureStates[mask, :2] = ['wall', 'grey']
+        self.futureStates[mask, 2] = np.copy(self.cells[mask, 3])
 
         # moving cells leave an empty cell
         mask = self.cells[:, 4] == 'move'
@@ -98,16 +111,16 @@ class CellularAutomaton(object):
         self.futureStates[mask] = np.copy(self.cells[mask, 1:4])
         self.futureStates[targets[mask]] = np.copy(self.cells[mask, 1:4])
 
-        # fights make cells empty
+        # fights make cells empty in first version, now reduce energy, uncomment as wanted
         mask = (self.cells[:, 4] == 'fight')
-        self.futureStates[mask] = np.copy(self.cells[mask, 1:4])    # cells that stay
+        self.futureStates[mask] = np.copy(self.cells[mask, 1:4])
         mask = mask & (self.futureStates[targets][:,0] != 'empty') & (self.futureStates[targets][:,0] != 'wall')
-        self.futureStates[targets[mask]] = ['empty', 'black', 0.0]
-
+        #self.futureStates[targets[mask]] = ['empty', 'black', 0.0]							#this kills
+        self.futureStates[targets[mask],2] -= self.parameters['energy']['fightdamage']		#this reduces energy
 
         # cells without energy will die here before they get energy, if your species is too active it's bad
-        mask = ((self.cells[:, 1] != 'empty') & (self.cells[:, 3] <= 0))
-        self.futureStates[mask] = ['empty', 'black', 0.0]
+        #mask = ((self.cells[:, 1] != 'empty') & (self.cells[:, 3] <= 0))
+        #self.futureStates[mask] = ['empty', 'black', 0.0]
         mask = ((self.futureStates[:, 0] != 'empty') & (self.futureStates[:, 2] <= 0))
         self.futureStates[mask] = ['empty', 'black', 0.0]
 
@@ -119,14 +132,14 @@ class CellularAutomaton(object):
         self.cells[:, 1:4] = self.futureStates
 
         emptyNeighbors = self.cells[self.neighbors, 1] == 'empty'
-        self.cells[:, 3] += np.sum(emptyNeighbors, axis=1) * self.parameters['energy']['fromEmptyCells'] + \
+        mask = ( self.cells[:,1] != 'empty' ) & ( self.cells[:,1] != 'wall' )
+        self.cells[mask, 3] += np.sum(emptyNeighbors[mask], axis=1) * self.parameters['energy']['fromEmptyCells'] + \
                             self.parameters['energy']['fromSun']
-        # hmm, just setting empty and walls cells to 0 energy, bc why not
+        # hmm, just setting empty cells to 0 energy, bc why not
         self.cells[self.cells[:, 1] == 'empty', 3] = 0.0
         # this resets the goals, not necessary but easier to make tests for
         self.cells[:, 4] = 'stay'
         self.cells[:, 5] = 0
-        self.cells[self.cells[:, 1] == 'wall', 3] = 0.0
 
     def findSpecies(self):
         return np.unique(self.cells[:, 1])
@@ -147,6 +160,9 @@ class CellularAutomaton(object):
                 except:
                     #print('problem with decisions of ', s)
                     pass
+
+        #invalid actions get overridden
+        self.cells[(self.cells[:,4] != 'move') & (self.cells[:,4] != 'fight') & (self.cells[:,4] != 'clone') & (self.cells[:,4] != 'wall') & (self.cells[:,4] != 'infuse'),4] = 'stay'
         #TODO maybe make some verbosity stuff to print this, so it does not spam when training
         #print("species counter: ", speciesCounter)
 
@@ -185,7 +201,7 @@ class CellularAutomaton(object):
 
 
 defaultParameters = {
-    'energy': {'stay': 1, 'move': 2, 'fight': 4, 'clone': 10, 'wall': 1, 'fromEmptyCells': 1, 'fromSun': 0},
+    'energy': {'stay': 1, 'move': 2, 'fight': 4, 'clone': 10, 'wall': 1, 'fromEmptyCells': 1, 'fromSun': 0, 'infuse': (5, 3), 'fightdamage': 10},
     'size' : {'x': 5, 'y': 5} 
     }
 
@@ -207,32 +223,32 @@ def initializeHexagonal(x=10, y=10):
 
     futureStates = np.copy(cells[:, 1:4])
 
-    temp = np.arange(x * y)
-    neighbors = np.zeros((x * y, 6))
-    neighbors[:, 0] = (np.int_(temp / y) + 1) % x * y + temp % y
-    neighbors[:, 1] = (np.int_(temp / y) - 1) % x * y + temp % y
-    neighbors[:, 2] = ((np.int_(temp / y) + temp % y % 2 - 1 ) % x) * y + (temp % y + 1) % y
-    neighbors[:, 3] = ((np.int_(temp / y) + temp % y % 2  ) % x) * y + (temp % y + 1) % y
-    neighbors[:, 4] = ((np.int_(temp / y) + temp % y % 2 - 1 ) % x) * y + (temp % y - 1) % y
-    neighbors[:, 5] = ((np.int_(temp / y) + temp % y % 2  ) % x) * y + (temp % y - 1) % y
-    neighbors = np.int_(neighbors)
+    neighbors = np.zeros((y, x, 6))
+    secondneighbors = np.zeros((y, x, 12))
+    temp = np.reshape(np.arange(x * y), (y,x))
+    for i in [0,1]:
+        neighbors[i::2,:, 0] = np.copy(np.roll(np.roll(temp, 0, axis=0), 1, axis=1))[i::2]
+        neighbors[i::2,:, 1] = np.copy(np.roll(np.roll(temp, 1, axis=0), 1-i, axis=1))[i::2]
+        neighbors[i::2,:, 2] = np.copy(np.roll(np.roll(temp, 1, axis=0), 0-i, axis=1))[i::2]
+        neighbors[i::2,:, 3] = np.copy(np.roll(np.roll(temp, 0, axis=0), -1, axis=1))[i::2]
+        neighbors[i::2,:, 4] = np.copy(np.roll(np.roll(temp, -1, axis=0), 0-i, axis=1))[i::2]
+        neighbors[i::2,:, 5] = np.copy(np.roll(np.roll(temp, -1, axis=0), 1-i, axis=1))[i::2]
 
-    temp = np.reshape(np.arange(x * y), (x,y))
-    #TODO fix second neighbors
-    secondneighbors = np.zeros((x * y, 12))
-    secondneighbors[:, 0] = np.copy(np.roll(np.roll(temp, 1, axis=1), 1, axis=1).flatten())
-    secondneighbors[:, 1] = np.copy(np.roll(np.roll(temp, 1, axis=0), 2, axis=1).flatten())
-    secondneighbors[:, 2] = np.copy(np.roll(np.roll(temp, 2, axis=0), 1, axis=1).flatten())
-    secondneighbors[:, 3] = np.copy(np.roll(np.roll(temp, 2, axis=0), 0, axis=1).flatten())
-    secondneighbors[:, 4] = np.copy(np.roll(np.roll(temp, 2, axis=0), -1, axis=1).flatten())
-    secondneighbors[:, 5] = np.copy(np.roll(np.roll(temp, 1, axis=0), -1, axis=1).flatten())
-    secondneighbors[:, 6] = np.copy(np.roll(np.roll(temp, 0, axis=0), -2, axis=1).flatten())
-    secondneighbors[:, 7] = np.copy(np.roll(np.roll(temp, -1, axis=0), -1, axis=1).flatten())
-    secondneighbors[:, 8] = np.copy(np.roll(np.roll(temp, -2, axis=0), -1, axis=1).flatten())
-    secondneighbors[:, 9] = np.copy(np.roll(np.roll(temp, -2, axis=0), 0, axis=1).flatten())
-    secondneighbors[:, 10] = np.copy(np.roll(np.roll(temp, -2, axis=0), 1, axis=1).flatten())
-    secondneighbors[:, 11] = np.copy(np.roll(np.roll(temp, -1, axis=0), 2, axis=1).flatten())
-    secondneighbors = np.int_(secondneighbors)
+        secondneighbors[i::2,:, 0] = np.copy(np.roll(np.roll(temp, 1, axis=1), 1, axis=1))[i::2]
+        secondneighbors[i::2,:, 1] = np.copy(np.roll(np.roll(temp, 1, axis=0), 2-i, axis=1))[i::2]
+        secondneighbors[i::2,:, 2] = np.copy(np.roll(np.roll(temp, 2, axis=0), 1, axis=1))[i::2]
+        secondneighbors[i::2,:, 3] = np.copy(np.roll(np.roll(temp, 2, axis=0), 0, axis=1))[i::2]
+        secondneighbors[i::2,:, 4] = np.copy(np.roll(np.roll(temp, 2, axis=0), -1, axis=1))[i::2]
+        secondneighbors[i::2,:, 5] = np.copy(np.roll(np.roll(temp, 1, axis=0), -1-i, axis=1))[i::2]
+        secondneighbors[i::2,:, 6] = np.copy(np.roll(np.roll(temp, 0, axis=0), -2, axis=1))[i::2]
+        secondneighbors[i::2,:, 7] = np.copy(np.roll(np.roll(temp, -1, axis=0), -1-i, axis=1))[i::2]
+        secondneighbors[i::2,:, 8] = np.copy(np.roll(np.roll(temp, -2, axis=0), -1, axis=1))[i::2]
+        secondneighbors[i::2,:, 9] = np.copy(np.roll(np.roll(temp, -2, axis=0), 0, axis=1))[i::2]
+        secondneighbors[i::2,:, 10] = np.copy(np.roll(np.roll(temp, -2, axis=0), 1, axis=1))[i::2]
+        secondneighbors[i::2,:, 11] = np.copy(np.roll(np.roll(temp, -1, axis=0), 2-i, axis=1))[i::2]
+
+    neighbors = np.int_(neighbors.reshape((x*y,6)))
+    secondneighbors = np.int_(secondneighbors.reshape((x*y,12)))
 
     return {'cells': cells, 'neighbors': neighbors, 'secondneighbors': secondneighbors, 'futureStates': futureStates,
             'shape': np.shape(temp), 'step': 0}
