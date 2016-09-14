@@ -52,5 +52,4 @@ def functions_to_call(fn):
 	return switcher.get(fn, "nothing")
 
 
-
 functions_to_call(sys.argv[1])(sys.argv[2], sys.argv[3])

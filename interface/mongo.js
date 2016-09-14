@@ -21,7 +21,7 @@ exports.close = function(db) {
     db.close();
 };
 
-exports.getData = function(db) {
+exports.getData = function(db, collectionName) {
     return new Bluebird(function(resolve, reject) {
         var collection = db.collection(collectionName);
 

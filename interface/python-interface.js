@@ -5,7 +5,7 @@
 var mongo = require('./mongo.js');
 
 
-exports.create = function(name) {
+exports.create = function() {
     return new PyInterface();
 };
 
@@ -18,9 +18,25 @@ const pythonPath = {
 };
 
 function PyInterface() {
-    this.readStateFromMongo = function() {
+
+    this.create = function(name) {
+        console.log(name);
+        var bla = new PythonShell('/modelnumpy/interface.py', {
+            mode: 'text',
+            pythonPath: pythonPath[process.platform],
+            args: ['create', name]
+        });
+    };
+
+    this.readStateFromMongo = function(collection) {
         return mongo.connect()
-            .then(mongo.getData);
+            .then(function(db) {
+                mongo.getData(db, collection)
+                    .then(function(result) {
+                        console.log(result);
+                    })
+            })
+
     };
 
     this.evolve = function() {
@@ -30,5 +46,12 @@ function PyInterface() {
         });
     };
 
+    this.evolveWithDecisions = function(decisions) {
+        new PythonShell('/modelnumpy/interface.py', {
+            mode: 'text',
+            pythonPath: pythonPath[process.platform],
+            args: ['evolve', JSON.stringify(decisions)]
+        });
+    };
 
 }
