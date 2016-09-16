@@ -19,8 +19,8 @@ const pythonPath = {
 
 function PyInterface() {
 
-    this.create = function(name) {
-        console.log(name);
+    this.newGame = function(name) {
+
         var bla = new PythonShell('/modelnumpy/interface.py', {
             mode: 'text',
             pythonPath: pythonPath[process.platform],
@@ -30,12 +30,7 @@ function PyInterface() {
 
     this.readStateFromMongo = function(collection) {
         return mongo.connect()
-            .then(function(db) {
-                mongo.getData(db, collection)
-                    .then(function(result) {
-                        console.log(result);
-                    })
-            })
+            .then(R.curry(mongo.getData)(R.__, collection));
 
     };
 

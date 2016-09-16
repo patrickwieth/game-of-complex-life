@@ -8,9 +8,9 @@ describe('engine', function() {
     describe('interface', function() {
         it('should create a game-of-life instance', function(done) {
             var py = pyInterface.create();
-            py.create("test");
+            py.newGame("test_game");
 
-            py.readStateFromMongo("test")
+            py.readStateFromMongo("test_game")
                 .then(function(state) {
                     state;
                     //gameOfLife.setState(state);
@@ -29,13 +29,13 @@ describe('engine', function() {
 
 
         it('should call evolve from python engine', function() {
-            var py = pyInterface.create("test");
-            py.evolve();
+            // var py = pyInterface.create("test");
+            // py.evolve();
         });
 
         it('should call evolve with decisions from python engine', function() {
-            var py = pyInterface.create("test");
-            py.evolveWithDecisions([]);
+            // var py = pyInterface.create("test");
+            // py.evolveWithDecisions([]);
         });
     });
 });

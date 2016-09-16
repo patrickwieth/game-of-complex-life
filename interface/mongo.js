@@ -1,7 +1,6 @@
 var Bluebird = require('bluebird');
 var MongoClient = require('mongodb').MongoClient;
-var dbName = "test";
-var collectionName = "my_collection";
+var dbName = "gocl";
 
 var url = 'mongodb://localhost:27017/'+dbName;
 
@@ -27,9 +26,7 @@ exports.getData = function(db, collectionName) {
 
         collection.find({}).toArray(function(err, docs) {
 
-            //console.log("Found the following records");
-            //console.dir(docs);
-            resolve(docs[0].state);
+            resolve(docs[0]);
         });
     });
 };
