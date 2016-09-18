@@ -31,4 +31,15 @@ exports.getData = function(db, collectionName) {
     });
 };
 
+exports.purge = function(db, collectionName) {
+    return new Bluebird(function(resolve, reject) {
+        var collection = db.collection(collectionName);
 
+        collection.dropCollection(collectionName, [], function(err, docs) {
+
+            err;
+            docs;
+            resolve(db);
+        });
+    });
+};

@@ -3,7 +3,7 @@
  */
 
 var mongo = require('./mongo.js');
-
+var Bluebird = require('bluebird');
 
 exports.create = function() {
     return new PyInterface();
@@ -17,15 +17,34 @@ const pythonPath = {
     win32: 'python'
 };
 
+const testSize = 5;
+
 function PyInterface() {
 
     this.newGame = function(name) {
+        return new Bluebird(function(resolve, reject) {
+            var py = new PythonShell('/modelnumpy/interface.py', {
+                mode: 'text',
+                pythonPath: pythonPath[process.platform],
+                args: ['create', name, testSize]
+            });
 
-        var bla = new PythonShell('/modelnumpy/interface.py', {
-            mode: 'text',
-            pythonPath: pythonPath[process.platform],
-            args: ['create', name]
+            py.end(function (err) {
+                if (err) return reject(err);
+                resolve("game "+name+" successfully created");
+
+
+
+
+
+            });
         });
+    };
+
+    this.deleteGame = function(name) {
+        return mongo.connect()
+            .then(R.curry(mongo.purge)(R.__, name))
+            .then(mongo.close)
     };
 
     this.readStateFromMongo = function(collection) {
