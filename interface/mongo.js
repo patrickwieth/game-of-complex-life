@@ -31,14 +31,12 @@ exports.getData = function(db, collectionName) {
     });
 };
 
-exports.purge = function(db, collectionName) {
+exports.empty = function(db, collectionName) {
     return new Bluebird(function(resolve, reject) {
         var collection = db.collection(collectionName);
 
-        collection.dropCollection(collectionName, [], function(err, docs) {
-
-            err;
-            docs;
+        collection.drop({}, function(err) {
+            if(err) reject(err);
             resolve(db);
         });
     });

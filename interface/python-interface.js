@@ -17,55 +17,63 @@ const pythonPath = {
     win32: 'python'
 };
 
-const testSize = 5;
-
 function PyInterface() {
 
-    this.newGame = function(name) {
+    this.newGame = function(name, gameSize) {
         return new Bluebird(function(resolve, reject) {
             var py = new PythonShell('/modelnumpy/interface.py', {
                 mode: 'text',
                 pythonPath: pythonPath[process.platform],
-                args: ['create', name, testSize]
+                args: ['create', name, gameSize]
             });
 
             py.end(function (err) {
                 if (err) return reject(err);
                 resolve("game "+name+" successfully created");
-
-
-
-
-
             });
         });
     };
 
     this.deleteGame = function(name) {
         return mongo.connect()
-            .then(R.curry(mongo.purge)(R.__, name))
+            .then(R.curry(mongo.empty)(R.__, name))
             .then(mongo.close)
     };
 
     this.readStateFromMongo = function(collection) {
+
+        function stateConversion(state) {
+            return {state: {color: state[2], energy: state[3], species: state[1]}};
+        }
+        function convertStateToJS(stateArray) {
+            return R.map(stateConversion, stateArray.data);
+        }
+        function Array1DTo2D(newSizeFn, array) {
+            var newSize = newSizeFn(array.length);
+            var newArray = [];
+            for(var i = 0; i < array.length; i += newSize) {
+                newArray.push(array.slice(i, i+newSize));
+            }
+
+            return newArray;
+        }
+
         return mongo.connect()
-            .then(R.curry(mongo.getData)(R.__, collection));
+            .then(R.curry(mongo.getData)(R.__, collection))
+            .then(convertStateToJS)
+            //.then(Array1DTo2D(Math.sqrt));
+
+            .then(function(result) {
+                return Array1DTo2D(Math.sqrt, result);
+            });
 
     };
 
-    this.evolve = function() {
-        new PythonShell('/modelnumpy/interface.py', {
-            mode: 'text',
-            pythonPath: pythonPath[process.platform]
-        });
-    };
-
-    this.evolveWithDecisions = function(decisions) {
+    this.evolve = function(decisions) {
         new PythonShell('/modelnumpy/interface.py', {
             mode: 'text',
             pythonPath: pythonPath[process.platform],
             args: ['evolve', JSON.stringify(decisions)]
         });
     };
-
 }
