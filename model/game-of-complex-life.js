@@ -102,21 +102,14 @@ exports.getState = function () {
 };
 
 exports.setState = function (state) {
-    function setStateFn(cell) {
-
-    }
 
     //gameOfLife.world.space = R.addIndex(R.map)(R.addIndex(R.map)(R.merge, ), );
-    var target = gameOfLife.world.space;
 
-
-    for(var i = 0; i < target.length; i++) {
-        for(var j = 0; j < target[i].length; j++) {
-            target[i][j] = R.merge(target[i][j], state[i][j]);
+    for(var i = 0; i < gameOfLife.world.space.length; i++) {
+        for(var j = 0; j < gameOfLife.world.space[i].length; j++) {
+            gameOfLife.world.space[i][j] = R.merge(gameOfLife.world.space[i][j], state[i][j]);
         }
     }
-
-    gameOfLife.world.space = target;
 
     // gameOfLife.world.space = R.merge(gameOfLife.world.space, state); // this would be nice if it worked
 

@@ -19,9 +19,9 @@ describe('engine', function() {
                 .tap(function (result) {
                     result.should.have.length(testSize);
                     gameOfLife.setState(result);
-                    gameOfLife.getState()[0][0].should.have.property('color');
-                    gameOfLife.getState()[4][0].should.have.property('energy');
-                    gameOfLife.getState()[0][4].should.have.property('species');
+                    gameOfLife.getState()[0][0].state.should.have.property('color');
+                    gameOfLife.getState()[4][0].state.should.have.property('energy');
+                    gameOfLife.getState()[0][4].state.should.have.property('species');
                 })
                 .then(R.partial(py.deleteGame, [testCollection]))
                 .then(done);
