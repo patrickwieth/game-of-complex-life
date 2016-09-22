@@ -8,13 +8,14 @@ const testSize = 5;
 var testCollection = "test_game";
 
 gameOfLife.setSize(testSize);
-gameOfLife.init();
+
 
 describe('engine', function() {
     describe('interface', function() {
-        it('should create a game-of-life instance', function(done) {
+        it('should create a game-of-life instance and load its state into JS', function(done) {
+            gameOfLife.init();
             var py = pyInterface.create();
-            py.newGame(testCollection)
+            py.newGame(testCollection, testSize)
                 .then(R.partial(py.readStateFromMongo, [testCollection]))
                 .tap(function (result) {
                     result.should.have.length(testSize);
@@ -27,13 +28,25 @@ describe('engine', function() {
                 .then(done);
         });
 
-        it('should call evolve with decisions from python engine', function() {
-            // var py = pyInterface.create("test");
-            // py.evolveWithDecisions([]);
+        it('should call evolve with empty decisions', function(done) {
+            var py = pyInterface.create();
+            py.newGame(testCollection, testSize)
+                .then(R.partial(py.evolve, [testCollection, []]))
+                .then(R.partial(py.deleteGame, [testCollection]))
+                .then(done);
         });
 
-        it('should clean the mongodb from test entries', function () {
-            //var py = pyInterface.create();
+        it('should place a new species', function(done) {
+            gameOfLife.init();
+            var py = pyInterface.create();
+            py.newGame(testCollection, testSize)
+                .then(R.partial(gameOfLife.newSpecies, [1, {color: "Red", species: "test", position: {x: 1, y: 1}}]))
+                .then(R.partial(py.deleteGame, [testCollection]))
+                .then(done);
+        });
+
+        it('should place a new species and move in a circle', function(done) {
+
         });
     });
 });

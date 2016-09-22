@@ -75,8 +75,6 @@ var mooreNeighborhood = function (sizeXY) {
     return world;
 };
 
-//var moore = new cellularAutomaton.createNeighborhood(mooreNeighborhood);
-
 var gameOfLife = new cellularAutomaton.createAutomat(mooreNeighborhood);
 
 

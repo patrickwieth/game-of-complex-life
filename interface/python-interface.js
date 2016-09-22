@@ -19,7 +19,7 @@ const pythonPath = {
 
 function PyInterface() {
 
-    this.newGame = function(name, gameSize) {
+    this.newGame = R.curry(function(name, gameSize) {
         return new Bluebird(function(resolve, reject) {
             var py = new PythonShell('/modelnumpy/interface.py', {
                 mode: 'text',
@@ -32,7 +32,7 @@ function PyInterface() {
                 resolve("game "+name+" successfully created");
             });
         });
-    };
+    });
 
     this.deleteGame = function(name) {
         return mongo.connect()
@@ -61,19 +61,14 @@ function PyInterface() {
         return mongo.connect()
             .then(R.curry(mongo.getData)(R.__, collection))
             .then(convertStateToJS)
-            //.then(Array1DTo2D(Math.sqrt));
-
-            .then(function(result) {
-                return Array1DTo2D(Math.sqrt, result);
-            });
-
+            .then(R.curry(Array1DTo2D)(Math.sqrt));
     };
 
-    this.evolve = function(decisions) {
+    this.evolve = R.curry(function(name, decisions) {
         new PythonShell('/modelnumpy/interface.py', {
             mode: 'text',
             pythonPath: pythonPath[process.platform],
-            args: ['evolve', JSON.stringify(decisions)]
+            args: ['evolve', name, JSON.stringify(decisions)]
         });
-    };
+    });
 }
