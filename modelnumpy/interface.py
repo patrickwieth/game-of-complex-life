@@ -13,12 +13,11 @@ def create(name, size):
 def take_decisions_and_evolve(name, decisions):
 	game = ca.CellularAutomaton(initialState=ca.initializeHexagonal(ca.defaultParameters['size']['x'],ca.defaultParameters['size']['y']), param=ca.defaultParameters)
 
-	last_step = mongo.read_last_step(name)
-	cellState = np.array(mongo.read_state(name, last_step)['data'])
+	last_step = mongo.read_last_step(name)	
+	mongoread = mongo.read_state(name, last_step['data'])
+	cellState = np.array(mongoread['data'])
 
 	state = game.getState()
-
-	state['step'] = last_step
 	
 	def num(s):
 		try:

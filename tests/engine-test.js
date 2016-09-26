@@ -40,13 +40,13 @@ describe('engine', function() {
             gameOfLife.init();
             var py = pyInterface.create();
             py.newGame(testCollection, testSize)
-                .then(R.partial(gameOfLife.newSpecies, [1, {color: "Red", species: "test", position: {x: 1, y: 1}}]))
+                .tap(R.partial(gameOfLife.newSpecies, [1, {color: "Red", species: "test", position: {x: 1, y: 1}}]))
                 .then(R.partial(py.deleteGame, [testCollection]))
                 .then(done);
         });
 
         it('should place a new species and move in a circle', function(done) {
-
+            done();
         });
     });
 });

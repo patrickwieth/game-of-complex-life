@@ -65,10 +65,17 @@ function PyInterface() {
     };
 
     this.evolve = R.curry(function(name, decisions) {
-        new PythonShell('/modelnumpy/interface.py', {
-            mode: 'text',
-            pythonPath: pythonPath[process.platform],
-            args: ['evolve', name, JSON.stringify(decisions)]
+        return new Bluebird(function (resolve, reject) {
+            var py = new PythonShell('/modelnumpy/interface.py', {
+                mode: 'text',
+                pythonPath: pythonPath[process.platform],
+                args: ['evolve', name, JSON.stringify(decisions)]
+            });
+
+            py.end(function (err) {
+                if (err) return reject(err);
+                resolve("game " + name + " evolved");
+            });
         });
     });
 }
