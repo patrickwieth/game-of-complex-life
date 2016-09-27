@@ -19,26 +19,57 @@ const pythonPath = {
 
 function PyInterface() {
 
-    this.newGame = R.curry(function(name, gameSize) {
+    this.newGame = R.curry(function(gameSize, chain) {
+        var gameName = chain.name;
         return new Bluebird(function(resolve, reject) {
             var py = new PythonShell('/modelnumpy/interface.py', {
                 mode: 'text',
                 pythonPath: pythonPath[process.platform],
-                args: ['create', name, gameSize]
+                args: ['create', gameName, gameSize]
             });
 
             py.end(function (err) {
                 if (err) return reject(err);
-                resolve("game "+name+" successfully created");
+                resolve(chain);
             });
         });
     });
 
-    this.deleteGame = function(name) {
-        return mongo.connect()
-            .then(mongo.empty(name))
+    this.deleteGame = function(chain) {
+        return mongo.connect(chain)
+            .then(mongo.empty)
             .then(mongo.close)
     };
+
+    this.readStateFromMongo = R.curry(function(stateLabel, chain) {
+        return mongo.connect(chain)
+            .then(mongo.getData(chain.name, stateLabel))
+            .then(mongo.close)
+            .then(R.over(R.lensProp('data'), R.pipe(R.map(stateToJS), R.curry(Array1DTo2D)(Math.sqrt)) ));
+    });
+
+    this.saveStateToMongo = R.curry(function(step, state, chain) {
+        state = R.addIndex(R.map)(stateToPy, Array2DTo1D(state));
+
+        return mongo.connect(chain)
+            .then(mongo.saveData(chain.name, step, state))
+            .then(mongo.close);
+    });
+
+    this.evolve = R.curry(function(decisions, chain) {
+        return new Bluebird(function (resolve, reject) {
+            var py = new PythonShell('/modelnumpy/interface.py', {
+                mode: 'text',
+                pythonPath: pythonPath[process.platform],
+                args: ['evolve', chain.name, JSON.stringify(decisions)]
+            });
+
+            py.end(function (err) {
+                if (err) return reject(err);
+                resolve(chain);
+            });
+        });
+    });
 
     function stateToJS(state) {
         return {state: {color: state[2], energy: state[3], species: state[1]}};
@@ -57,37 +88,4 @@ function PyInterface() {
     function Array2DTo1D(array) {
         return [].concat.apply([], array);
     }
-
-    this.readStateFromMongo = function(collection, stateLabel) {
-
-        return mongo.connect()
-            .then(mongo.getData(collection, stateLabel))
-            .then(mongo.close)
-            .then(R.prop('data'))
-            .then(R.map(stateToJS))
-            .then(R.curry(Array1DTo2D)(Math.sqrt));
-    };
-
-    this.saveStateToMongo = function(collection, step, state) {
-        state = R.addIndex(R.map)(stateToPy, Array2DTo1D(state));
-
-        return mongo.connect()
-            .then(mongo.saveData(collection, step, state))
-            .then(mongo.close);
-    };
-
-    this.evolve = R.curry(function(name, decisions) {
-        return new Bluebird(function (resolve, reject) {
-            var py = new PythonShell('/modelnumpy/interface.py', {
-                mode: 'text',
-                pythonPath: pythonPath[process.platform],
-                args: ['evolve', name, JSON.stringify(decisions)]
-            });
-
-            py.end(function (err) {
-                if (err) return reject(err);
-                resolve("game " + name + " evolved");
-            });
-        });
-    });
 }

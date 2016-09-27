@@ -51,13 +51,13 @@ exports.saveData = R.curry(function(collectionName, name, data, chain) {
     });
 });
 
-exports.empty = R.curry(function(collectionName, chain) {
+exports.empty = function(chain) {
     return new Bluebird(function(resolve, reject) {
-        var collection = chain.db.collection(collectionName);
+        var collection = chain.db.collection(chain.name);
 
         collection.drop({}, function(err) {
             if(err) reject(err);
             resolve(chain);
         });
     });
-});
+};

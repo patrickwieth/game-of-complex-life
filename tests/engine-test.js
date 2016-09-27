@@ -5,44 +5,46 @@ var pyInterface = require('../interface/python-interface.js');
 var gameOfLife = require('../model/game-of-complex-life.js');
 
 const testSize = 5;
-var testCollection = "test_game";
+var testName = "test_game";
 
 gameOfLife.setSize(testSize);
 
 
 describe('engine', function() {
     describe('interface', function() {
+        var py = pyInterface.create();
+
         it('should create a game-of-life instance and load its state into JS', function(done) {
             gameOfLife.init();
-            var py = pyInterface.create();
-            py.newGame(testCollection, testSize)
-                .then(R.partial(py.readStateFromMongo, [testCollection, "step0"]))
-                .tap(function (result) {
+
+            py.newGame(testSize, {name: testName})
+                .then(py.readStateFromMongo("step0"))
+                .tap(function (res) {
+                    result = res.data;
                     result.should.have.length(testSize);
                     gameOfLife.setState(result);
                     gameOfLife.getState()[0][0].state.should.have.property('color');
                     gameOfLife.getState()[4][0].state.should.have.property('energy');
                     gameOfLife.getState()[0][4].state.should.have.property('species');
                 })
-                .then(R.partial(py.deleteGame, [testCollection]))
+                .then(py.deleteGame)
                 .finally(done);
         });
 
         it('should call evolve with empty decisions', function(done) {
-            var py = pyInterface.create();
-            py.newGame(testCollection, testSize)
-                .then(R.partial(py.evolve, [testCollection, []]))
-                .then(R.partial(py.deleteGame, [testCollection]))
+            py.newGame(testSize, {name: testName})
+                .then(py.evolve([]))
+                .then(py.deleteGame)
                 .finally(done);
         });
 
         it('should place a new species', function(done) {
             gameOfLife.init();
-            var py = pyInterface.create();
-            py.newGame(testCollection, testSize)
+
+            py.newGame(testSize, {name: testName})
                 .tap(R.partial(gameOfLife.newSpecies, [1, {color: "Red", species: "test", position: {x: 1, y: 1}}]))
-                .tap(R.partial(py.saveStateToMongo, [testCollection, "step0", gameOfLife.getState()]))
-                .then(R.partial(py.deleteGame, [testCollection]))
+                .tap(py.saveStateToMongo("step0", gameOfLife.getState()))
+                .then(py.deleteGame)
                 .finally(done);
         });
 
