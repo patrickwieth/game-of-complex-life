@@ -36,32 +36,44 @@ function PyInterface() {
 
     this.deleteGame = function(name) {
         return mongo.connect()
-            .then(R.curry(mongo.empty)(R.__, name))
+            .then(mongo.empty(name))
             .then(mongo.close)
     };
 
-    this.readStateFromMongo = function(collection) {
+    function stateToJS(state) {
+        return {state: {color: state[2], energy: state[3], species: state[1]}};
+    }
+    function stateToPy(entry, index) {
+        return [index, entry.state.species, entry.state.color, 0, "stay", 0]
+    }
+    function Array1DTo2D(newSizeFn, array) {
+        var newSize = newSizeFn(array.length);
+        var newArray = [];
+        for(var i = 0; i < array.length; i += newSize) {
+            newArray.push(array.slice(i, i+newSize));
+        }
+        return newArray;
+    }
+    function Array2DTo1D(array) {
+        return [].concat.apply([], array);
+    }
 
-        function stateConversion(state) {
-            return {state: {color: state[2], energy: state[3], species: state[1]}};
-        }
-        function convertStateToJS(stateArray) {
-            return R.map(stateConversion, stateArray.data);
-        }
-        function Array1DTo2D(newSizeFn, array) {
-            var newSize = newSizeFn(array.length);
-            var newArray = [];
-            for(var i = 0; i < array.length; i += newSize) {
-                newArray.push(array.slice(i, i+newSize));
-            }
-
-            return newArray;
-        }
+    this.readStateFromMongo = function(collection, stateLabel) {
 
         return mongo.connect()
-            .then(R.curry(mongo.getData)(R.__, collection))
-            .then(convertStateToJS)
+            .then(mongo.getData(collection, stateLabel))
+            .then(mongo.close)
+            .then(R.prop('data'))
+            .then(R.map(stateToJS))
             .then(R.curry(Array1DTo2D)(Math.sqrt));
+    };
+
+    this.saveStateToMongo = function(collection, step, state) {
+        state = R.addIndex(R.map)(stateToPy, Array2DTo1D(state));
+
+        return mongo.connect()
+            .then(mongo.saveData(collection, step, state))
+            .then(mongo.close);
     };
 
     this.evolve = R.curry(function(name, decisions) {

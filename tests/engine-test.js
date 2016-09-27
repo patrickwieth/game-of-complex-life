@@ -16,7 +16,7 @@ describe('engine', function() {
             gameOfLife.init();
             var py = pyInterface.create();
             py.newGame(testCollection, testSize)
-                .then(R.partial(py.readStateFromMongo, [testCollection]))
+                .then(R.partial(py.readStateFromMongo, [testCollection, "step0"]))
                 .tap(function (result) {
                     result.should.have.length(testSize);
                     gameOfLife.setState(result);
@@ -25,7 +25,7 @@ describe('engine', function() {
                     gameOfLife.getState()[0][4].state.should.have.property('species');
                 })
                 .then(R.partial(py.deleteGame, [testCollection]))
-                .then(done);
+                .finally(done);
         });
 
         it('should call evolve with empty decisions', function(done) {
@@ -33,7 +33,7 @@ describe('engine', function() {
             py.newGame(testCollection, testSize)
                 .then(R.partial(py.evolve, [testCollection, []]))
                 .then(R.partial(py.deleteGame, [testCollection]))
-                .then(done);
+                .finally(done);
         });
 
         it('should place a new species', function(done) {
@@ -41,8 +41,9 @@ describe('engine', function() {
             var py = pyInterface.create();
             py.newGame(testCollection, testSize)
                 .tap(R.partial(gameOfLife.newSpecies, [1, {color: "Red", species: "test", position: {x: 1, y: 1}}]))
+                .tap(R.partial(py.saveStateToMongo, [testCollection, "step0", gameOfLife.getState()]))
                 .then(R.partial(py.deleteGame, [testCollection]))
-                .then(done);
+                .finally(done);
         });
 
         it('should place a new species and move in a circle', function(done) {
