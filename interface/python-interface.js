@@ -58,6 +58,15 @@ function PyInterface() {
 
     this.evolve = R.curry(function(decisions, chain) {
         return new Bluebird(function (resolve, reject) {
+            if(!decisions || !decisions.length || !decisions[0].decisions) decisions = [];
+
+            // convert to robin's bullshit format
+            decisions = R.map(function(species) {
+                return R.over(R.lensProp('decisions'), function(entry) {
+                    return R.map(function(a) { return [a.action, a.value]; }, entry);
+                }, species);
+            }, decisions);
+
             var py = new PythonShell('/modelnumpy/interface.py', {
                 mode: 'text',
                 pythonPath: pythonPath[process.platform],
@@ -75,7 +84,7 @@ function PyInterface() {
         return {state: {color: state[2], energy: state[3], species: state[1]}};
     }
     function stateToPy(entry, index) {
-        return [index, entry.state.species, entry.state.color, 0, "stay", 0]
+        return [index, entry.state.species, entry.state.color, entry.state.energy, "stay", 0]
     }
     function Array1DTo2D(newSizeFn, array) {
         var newSize = newSizeFn(array.length);

@@ -48,8 +48,39 @@ describe('engine', function() {
                 .finally(done);
         });
 
+        it('should place a new species and move 1 field', function(done) {
+            gameOfLife.init();
+
+            py.newGame(testSize, {name: testName})
+                .tap(R.partial(gameOfLife.newSpecies, [1, {color: "Red", species: "test", position: {x: 1, y: 1}}]))
+                .then(py.saveStateToMongo("step0", gameOfLife.getState()))
+                .then(py.evolve([{species: "test", decisions: [{action: "move", value: 0}]}]))
+                .tap(function() {
+                    // TODO checks here
+                })
+                .then(py.deleteGame)
+                .finally(done);
+        });
+
         it('should place a new species and move in a circle', function(done) {
-            done();
+            this.timeout(12000);    // TODO WTF? 12s
+
+            gameOfLife.init();
+
+            py.newGame(testSize, {name: testName})
+                .tap(R.partial(gameOfLife.newSpecies, [1, {color: "Red", species: "test", position: {x: 1, y: 1}}]))
+                .then(py.saveStateToMongo("step0", gameOfLife.getState()))
+                .then(py.evolve([{species: "test", decisions: [{action: "move", value: 0}]}]))
+                .then(py.evolve([{species: "test", decisions: [{action: "move", value: 1}]}]))
+                .then(py.evolve([{species: "test", decisions: [{action: "move", value: 2}]}]))
+                .then(py.evolve([{species: "test", decisions: [{action: "move", value: 3}]}]))
+                .then(py.evolve([{species: "test", decisions: [{action: "move", value: 4}]}]))
+                .then(py.evolve([{species: "test", decisions: [{action: "move", value: 5}]}]))
+                .tap(function() {
+                    // TODO checks here
+                })
+                .then(py.deleteGame)
+                .finally(done);
         });
     });
 });

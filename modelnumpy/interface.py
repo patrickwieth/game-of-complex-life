@@ -3,7 +3,7 @@ import numpy as np
 import sys
 
 import mongo
-
+import json
 
 def create(name, size):
 	game = ca.CellularAutomaton(initialState=ca.initializeHexagonal(ca.defaultParameters['size']['x'],ca.defaultParameters['size']['y']), param=ca.defaultParameters)
@@ -32,8 +32,11 @@ def take_decisions_and_evolve(name, decisions):
 
 	game.setState(state)
 	
-	#for x in decisions
-	#	game.setDecisions("fucksor", [["stay", 0], ["stay", 0]]) 
+	decisions = json.loads(decisions)
+
+	for x in decisions:
+		#print(x)
+		game.setDecisions(x['species'], x['decisions']) 
 
 	game.evolve()
 
