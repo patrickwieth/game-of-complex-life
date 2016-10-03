@@ -3,108 +3,98 @@
  */
 
 var mongo = require('./mongo.js');
+var Bluebird = require('bluebird');
 
-
-exports.test = test;
-exports.create = function(name) {
-    return new PyInterface(name);
+exports.create = function() {
+    return new PyInterface();
 };
 
 var PythonShell = require('python-shell');
 var R = require('ramda');
 
-console.log(process.platform);
 const pythonPath = {
     linux: 'python3',
     win32: 'python'
 };
 
 function PyInterface() {
-    this.readStateFromMongo = function() {
-        return mongo.connect()
-            .then(mongo.getData);
-    };
 
-    this.shell = new PythonShell('/modelpy/node-interface.py', {
-        mode: 'json',
-        pythonPath: pythonPath[process.platform]
-    });
+    this.newGame = R.curry(function(gameSize, chain) {
+        var gameName = chain.name;
+        return new Bluebird(function(resolve, reject) {
+            var py = new PythonShell('/modelnumpy/interface.py', {
+                mode: 'text',
+                pythonPath: pythonPath[process.platform],
+                args: ['create', gameName, gameSize]
+            });
 
-    this.send = function() {
-        return this.shell.send({"command": "killAll"});
-    };
-
-    this.end = function() {
-        this.shell.end(function (err) {
-            if (err) console.log(err);
+            py.end(function (err) {
+                if (err) return reject(err);
+                resolve(chain);
+            });
         });
+    });
+
+    this.deleteGame = function(chain) {
+        return mongo.connect(chain)
+            .then(mongo.empty)
+            .then(mongo.close)
     };
 
-    this.buffer = [];
-    var that = this;
-
-    this.printBuffer = function() {
-        console.log(that.buffer);
-    };
-
-    this.shell.on('message', function (message) {
-        // received a message sent from the Python script (a simple "print" statement)
-        console.log("receive");
-        that.buffer.push(message);
+    this.readStateFromMongo = R.curry(function(stateLabel, chain) {
+        return mongo.connect(chain)
+            .then(mongo.getData(chain.name, stateLabel))
+            .then(mongo.close)
+            .then(R.over(R.lensProp('data'), R.pipe(R.map(stateToJS), R.curry(Array1DTo2D)(Math.sqrt)) ));
     });
 
-}
+    this.saveStateToMongo = R.curry(function(step, state, chain) {
+        state = R.addIndex(R.map)(stateToPy, Array2DTo1D(state));
 
-
-function test() {
-
-    console.log("bla");
-
-    var pyshell = new PythonShell('/modelpy/node-interface.py', {
-        mode: 'json',
-        pythonPath: pythonPath
+        return mongo.connect(chain)
+            .then(mongo.saveData(chain.name, step, state))
+            .then(mongo.close);
     });
 
+    this.evolve = R.curry(function(decisions, chain) {
+        return new Bluebird(function (resolve, reject) {
+            if(!decisions || !decisions.length || !decisions[0].decisions) decisions = [];
 
-    pyshell.stdout.on('data', function (data) {
-        console.log(data);
+            // convert to robin's bullshit format
+            decisions = R.map(function(species) {
+                return R.over(R.lensProp('decisions'), function(entry) {
+                    return R.map(function(a) { return [a.action, a.value]; }, entry);
+                }, species);
+            }, decisions);
+
+            var py = new PythonShell('/modelnumpy/interface.py', {
+                mode: 'text',
+                pythonPath: pythonPath[process.platform],
+                args: ['evolve', chain.name, JSON.stringify(decisions)]
+            });
+
+            py.end(function (err) {
+                if (err) return reject(err);
+                resolve(chain);
+            });
+        });
     });
 
-    pyshell.send({"command": "killAll"}).end(function (err) {
-        if (err) console.log(err);
-
-    });
-
-    setTimeout(R.partial(terminate, [pyshell]), 1000);
-
-
+    function stateToJS(state) {
+        return {state: {color: state[2], energy: state[3], species: state[1]}};
+    }
+    function stateToPy(entry, index) {
+        return [index, entry.state.species, entry.state.color, entry.state.energy, "stay", 0]
+    }
+    function Array1DTo2D(newSizeFn, array) {
+        var newSize = newSizeFn(array.length);
+        var newArray = [];
+        for(var i = 0; i < array.length; i += newSize) {
+            newArray.push(array.slice(i, i+newSize));
+        }
+        return newArray;
+    }
+    function Array2DTo1D(array) {
+        return [].concat.apply([], array);
+    }
 }
-
-function terminate(shell) {
-    // end the input stream and allow the process to exit
-    shell.end(function (err) {
-        if (err) throw err;
-        console.log('finished');
-    });
-}
-
-function init() {
-    pyshell.send({ command: 'init' });
-}
-
-function killAll(species) {
-    pyshell.send({ command: 'killAll', value: species });
-}
-
-function newSpecies(clientId, event) {
-    pyshell.send({ command: 'newSpecies', clientId: clientId, event: event });
-}
-
-function registerDecisions(species, value) {
-    pyshell.send({ command: 'registerDecisions', species: species, value: value });
-}
-
-function setParameters(event) {
-    pyshell.send({ command: 'setParameters', event: event });
-}
-

@@ -20,14 +20,13 @@ var emptyCell = new cellularAutomaton.createCell(
     }
 );
 
-
-var mooreNeighborhood = new cellularAutomaton.createNeighborhood(function () {
+var mooreNeighborhood = function (sizeXY) {
     var world = {};
     var space = [];
 
     var size = {
-        x: 100,
-        y: 100
+        x: sizeXY,
+        y: sizeXY
     };
 
     for (var i = 0; i < size.x; i++) {
@@ -61,7 +60,6 @@ var mooreNeighborhood = new cellularAutomaton.createNeighborhood(function () {
     }
     world.space = space;
 
-    // this is not in use, but should be!
     world.parameters = {
         energy: {
             stay: 1,
@@ -75,7 +73,7 @@ var mooreNeighborhood = new cellularAutomaton.createNeighborhood(function () {
     };
 
     return world;
-});
+};
 
 var gameOfLife = new cellularAutomaton.createAutomat(mooreNeighborhood);
 
@@ -89,6 +87,8 @@ function print() {
 
 exports.init = R.bind(gameOfLife.init, gameOfLife);
 
+exports.setSize = R.bind(gameOfLife.setSize, gameOfLife);
+
 exports.evolve = R.bind(gameOfLife.evolve, gameOfLife);
 
 exports.registerDecisions = function(species, decisions) {
@@ -100,7 +100,18 @@ exports.getState = function () {
 };
 
 exports.setState = function (state) {
-    gameOfLife.world.space = state;
+
+    //gameOfLife.world.space = R.addIndex(R.map)(R.addIndex(R.map)(R.merge, ), );
+
+    for(var i = 0; i < gameOfLife.world.space.length; i++) {
+        for(var j = 0; j < gameOfLife.world.space[i].length; j++) {
+            gameOfLife.world.space[i][j] = R.merge(gameOfLife.world.space[i][j], state[i][j]);
+        }
+    }
+
+    // gameOfLife.world.space = R.merge(gameOfLife.world.space, state); // this would be nice if it worked
+
+    //gameOfLife.world.space = state; was this before
 };
 
 exports.killAll = function (species) {

@@ -3,7 +3,7 @@ var Promise = require("bluebird");
 
 exports.createAutomat = CellularAutomaton;
 exports.createCell = Cell;
-exports.createNeighborhood = Neighborhood;
+//exports.createNeighborhood = Neighborhood;
 
 /*
  erlaubte actions f�r eine Zelle:
@@ -61,11 +61,11 @@ function Cell(initFunction) {
         this.futureState = emptyState;
     }
 }
-
+/*
 function Neighborhood(createSpace) {
     this.createSpace = createSpace;
 }
-
+*/
 // Constructor for Cellular Automaton
 function CellularAutomaton(neighborhood) {
     var that = this;
@@ -84,11 +84,16 @@ function CellularAutomaton(neighborhood) {
         recursion(this.world.space);
     };
 
-    this.neighborhood = neighborhood;
+    this.size = 100;
+    this.neighborhood = {};
+    this.neighborhood.createSpace = neighborhood;
 
+    this.setSize = function(sizeXY) {
+        this.size = sizeXY;
+    };
     this.init = function () {
 
-        this.world = this.neighborhood.createSpace();
+        this.world = this.neighborhood.createSpace(this.size);
 
         this.applyFunc(function (cell) {
             cell.init();

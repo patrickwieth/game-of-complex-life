@@ -1,37 +1,63 @@
+var R = require('ramda');
 var Bluebird = require('bluebird');
 var MongoClient = require('mongodb').MongoClient;
-var dbName = "test";
-var collectionName = "my_collection";
-
+var dbName = "gocl";
 var url = 'mongodb://localhost:27017/'+dbName;
 
-exports.connect = function() {
+exports.connect = function(chain) {
+    if(!chain) chain = {};
+
     return new Bluebird(function(resolve, reject) {
         MongoClient.connect(url, function(err, db) {
             if(err) reject(err);
             else {
                 console.log("Connected correctly to server", url);
-                resolve(db);
+                chain.db = db;
+                resolve(chain);
             }
         });
     });
 };
 
-exports.close = function(db) {
-    db.close();
+exports.close = function(chain) {
+    chain.db.close();
+    return chain;
 };
 
-exports.getData = function(db) {
+exports.getData = R.curry(function(collectionName, name, chain) {
     return new Bluebird(function(resolve, reject) {
-        var collection = db.collection(collectionName);
+        var collection = chain.db.collection(collectionName);
 
-        collection.find({}).toArray(function(err, docs) {
+        collection.find({name: name}).toArray(function(err, docs) {
+            if(err) reject(err);
+            chain.data = docs[0].data;
+            resolve(chain);
+        });
+    });
+});
 
-            //console.log("Found the following records");
-            //console.dir(docs);
-            resolve(docs[0].state);
+exports.saveData = R.curry(function(collectionName, name, data, chain) {
+    return new Bluebird(function(resolve, reject) {
+        var collection = chain.db.collection(collectionName);
+
+        collection.updateOne(
+            {"name": name},
+            {$set: {data: data} },
+            {upsert:true},
+            function(err, docs) {
+                if(err) reject(err);
+                resolve(chain);
+            });
+    });
+});
+
+exports.empty = function(chain) {
+    return new Bluebird(function(resolve, reject) {
+        var collection = chain.db.collection(chain.name);
+
+        collection.drop({}, function(err) {
+            if(err) reject(err);
+            resolve(chain);
         });
     });
 };
-
-
