@@ -45,6 +45,20 @@ class HexagonGenerator(object):
         return ret
 
 
+def saveStatePicture2(state,path):
+    edge = 32
+    size = (int(state['shape'][1]*3**.5*edge+edge)),(int(state['shape'][0]*1.5*edge+edge))
+    hexagon_generator = HexagonGenerator(2*edge)
+    colors = np.reshape(state['cells'][:, 2], state['shape'])
+    image = Image.new('RGB', (2*size[0],2*size[1]), 'white')
+    draw = ImageDraw.Draw(image)
+    for i in range(len(colors)):
+        for j in range(len(colors[0])):
+            hexagon = hexagon_generator(i, j)
+            draw.polygon(hexagon, outline='black', fill=colors[i, j])
+    image.thumbnail(size)
+    image.save(path)
+
 def saveStatePicture(state, directory):
     edge = 32
     size = (int(state['shape'][1]*3**.5*edge+edge)),(int(state['shape'][0]*1.5*edge+edge))
