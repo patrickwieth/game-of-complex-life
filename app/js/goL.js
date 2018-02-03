@@ -40,17 +40,8 @@ var goL = (function () {
         }
     }
 
-/*
-    goL.clearGrid = function () {
-        for (var i = 0; i < size.x; i++) {
-            for (var j = 0; j < size.y; j++) {
-                space[i][j] = false;
-            }
-        }
-    };
-*/
 
-    goL.get = function (d) { // get status of pth bit
+    goL.getColor = function (d) { // get status of pth bit
         var x = d % size.x;
         var y = Math.floor(d / size.x);
         return space[x % size.x][y % size.y].state.color;
@@ -65,36 +56,54 @@ var goL = (function () {
     };
 
     function handleClick(p) {
+        d3.event.preventDefault();  // for right click: this prevents browser context menu
+
         var position = {
             x: p % size.x,
             y: Math.floor(p / size.x)
         };
         console.log(position);
-
-        var shittyColors = ["yellow", "blue"];
-        var colorDice = ["steelblue", "red", "green", "teal", "orange", "purple", "pink", "brown", "cyan", "magenta", "grey"];
-
-        name = newName;
+        console.log(space[position.x][position.y]);
 
         socket.send({
-            type: "newSpecies",
+            type: "rightClick",
             key: myKey,
-            color: colorDice[Math.floor(Math.random() * colorDice.length)],
-            species: name,
             position: position
         });
     }
 
-    /* circles
-     var rects = d3.select("svg").selectAll("circle").data(d3.range(0,bits)).enter().append("circle")
-     .attr("cx",function(d){ return (d&127)*7;})
-     .attr("cy",function(d){ return (d>>>7)*7;})
-     .attr("r",3)
-     //.attr("width",7).attr("height",7)     //exchange "circle" with "rect" 2 times and uncomment this to get rects
-     .style("fill",function(d){ return goL.get(d)==1? "steelblue":"white";})
-     .on("click",handleClick);*/
 
-    var rects = d3.select("svg").selectAll("path").data(d3.range(0, size.x * size.y)).enter().append("path")
+    var svg = d3.select("body")
+        .append("svg")
+        .attr("width", "100%")
+        .attr("height", "100%")
+        .call(d3.zoom().on("zoom", function () {
+            svg.attr("transform", d3.event.transform)
+        }))
+        .append("g");
+
+    var spacingH = 120;
+    var spacingV = 104;
+    var map = svg.selectAll("path").data(d3.range(0, size.x * size.y)).enter().append("svg:image")
+        .attr('x', function(d) {
+            var row = Math.floor(d / size.x);
+            var col = d % size.x;
+
+            return spacingH * col + (row%2 * spacingH/2);
+        })
+        .attr('y', function(d) {
+            var row = Math.floor(d / size.x);
+            var col = d % size.x;
+
+            return spacingV * row;
+        })
+        //.attr('width', 120)
+        //.attr('height', 140)
+        .on("contextmenu", handleClick)
+        .attr("xlink:href", "imgs/blacksmith.png");
+
+    /*
+    var map = d3.select("svg").selectAll("path").data(d3.range(0, size.x * size.y)).enter().append("path")
         .attr("d", function (d) {
             var spacingH = 10;
             var spacingV = 9;
@@ -119,27 +128,30 @@ var goL = (function () {
                 "L " + points[0][0] + " " + points[0][1] + " ";
         })
         .attr("stroke", function (d) {
-            return goL.get(d);
+            return goL.getColor(d);
         })
         .attr("stroke-width", 1)
         .on("click", handleClick);
+    */
 
 
     goL.setGrid = function (array) {  //set the initial bits
+
+        hasChanged = function (n) {
+            var x = n % size.x;
+            var y = Math.floor(n / size.x);
+            return space[x][y] !== array[x][y];
+        };
+
         /*
-         var changedCells = [];
+        map.style("fill", function (d) {
+            return goL.getColor(d);
+        });
+        */
 
-         for(var i = 0; i < size.x; i++) {
-         for(var j = 0; j < size.y; j++) {
-         if(space[i][j] !== array[i][j]) {
-         changedCells.push(Math.floor(i*size.y)+j%size.x);
-         }
-         }
-         }
-         */
-
-        rects.style("fill", function (d) {
-            return goL.get(d);
+        map.filter(hasChanged)
+            .attr("xlink:href", function(d) {
+            return "imgs/"+goL.getColor(d)+".png";
         });
 
         for(var i = 0; i < size.x; i++) {

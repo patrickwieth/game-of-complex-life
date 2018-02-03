@@ -7,6 +7,7 @@
     window.name = name;
     window.newName = newName;
 
+    /*
     enableEditor();
 
     function enableEditor() {
@@ -25,7 +26,7 @@
             editor.setValue(decisionFn);
         }
     }
-
+    */
 
     function setDecisionFunction(fn) {
         // fn should be something like: '(function(){})'
@@ -42,8 +43,6 @@
             console.log('DecisionFn could not be parsed', bla, 'fn:', fn);
             return;
         }
-
-
 
         // here a check should be run
         var testCell = {

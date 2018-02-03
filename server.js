@@ -43,7 +43,7 @@ io.on('connection', function(client) {
         }
 
         if(event === 'reset') {
-            gameOfLife.init();
+            gameEngine.init();
         }
         if(event === 'start') {
             updateInterval = setInterval(updates, timePerFrame);
@@ -52,34 +52,23 @@ io.on('connection', function(client) {
             clearInterval(updateInterval);
         }
         if(typeof event === 'object') {
-            if(event.type === 'newSpecies') {
+            if(event.type === 'rightClick') {
                 if(validKey(event)) {
                     var id = clientId(event);
 
-                    // kill all old cells
-                    gameOfLife.killAll(clients[id].species);
-
-                    // register new species, first check for valid name
-                    if(typeof event.species === 'string' && event.species !== 'empty' && event.species !== 'wall') {
-
-                        clients[id].color = event.color;
-                        clients[id].species = event.species;
-
-                        gameOfLife.newSpecies(id, event);
-                        console.log('Registering new species:',event);
-                    }
+                    gameEngine.handleClick(event);
                 }
             }
             else if(event.type === 'decisions') {
                 if(validKey(event)) {
-                    gameOfLife.registerDecisions(clients[clientId(event)].species, event.value);
+                    gameEngine.registerDecisions(clients[clientId(event)].species, event.value);
                     //console.log('Registered decisions from client:',event);
                     console.log("registered "+event.value.length+" decisions from user " + clientId(event));
                 }
                 else console.log("invalid key received for decisions");
             }
             else if(event.type === 'setParameters') {
-                gameOfLife.setParameters(event);
+                gameEngine.setParameters(event);
                 console.log('parameters from client:',event);
             }
         }
@@ -107,20 +96,20 @@ app.get('/', function(req, res){
     res.render('index.html');
 });
 
-var gameOfLife = require('./model/game-of-complex-life.js');
+var gameEngine = require('./model/kenney-nl.js');
 
 // updates of game come here:
-var timePerFrame = 200;
+var timePerFrame = 1000;
 
 var updates = function() {
 
-    gameOfLife.evolve();
+    gameEngine.evolve();
 
     var strippedState =
         R.map( function(row) {
             return R.map( R.path(['state']), row)
-        }, gameOfLife.getState());
-
+        }, gameEngine.getState());
+    
     io.sockets.volatile.emit('state', strippedState);
 };
 

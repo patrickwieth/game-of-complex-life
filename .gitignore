@@ -1,7 +1,9 @@
 __pycache__/
 .idea/
+/app/.idea
 *.png
 pics/
+node_modules/
 
 # Compiled source #
 ###################

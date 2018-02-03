@@ -142,6 +142,34 @@ exports.setParameters = function (event) {
     gameOfLife.parameters.someProperty = event.someProperty;
 };
 
+// THIS IS NOT FINISHED!! TODO
+exports.handleClick = function () {
+
+    var shittyColors = ["yellow", "blue"];
+    var colorDice = ["steelblue", "red", "green", "teal", "orange", "purple", "pink", "brown", "cyan", "magenta", "grey"];
+
+    name = "bla"; //newName; //where does this come from?
+
+    event = {
+        species: name,
+        color: colorDice[Math.floor(Math.random() * colorDice.length)],
+        position: position
+    };
+
+    // kill all old cells
+    gameOfLife.killAll(clients[id].species);
+
+    // register new species, first check for valid name
+    if(typeof event.species === 'string' && event.species !== 'empty' && event.species !== 'wall') {
+
+        clients[id].color = event.color;
+        clients[id].species = event.species;
+
+        gameOfLife.newSpecies(id, event);
+        console.log('Registering new species:',event);
+    }
+};
+
 
 function mapRandomStart(fn, array) {
     var startIndex = Math.floor(Math.random() * array.length);

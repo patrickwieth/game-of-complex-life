@@ -53,7 +53,6 @@ function Cell(initFunction) {
                 value: 0
             };
         }
-
     };
 
     this.kill = function () {
